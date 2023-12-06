@@ -4,9 +4,11 @@ use specs::World;
 
 use crate::components::Position;
 use crate::components::Renderable;
+use crate::map;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
+use crate::systems::MapIndexingSystem;
 use crate::systems::MonsterAISystem;
 use crate::systems::VisibilitySystem;
 
@@ -28,6 +30,9 @@ impl State {
 
         let mut mob = MonsterAISystem {};
         mob.run_now(&self.ecs);
+
+        let mut map_idx = MapIndexingSystem {};
+        map_idx.run_now(&self.ecs);
 
         self.ecs.maintain();
     }

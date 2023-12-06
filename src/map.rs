@@ -22,11 +22,32 @@ pub struct Map {
     pub rooms: Vec<Rect>,
     pub width: i32,
     pub height: i32,
+    // Is the point blocked by something?
+    pub blocked: Vec<bool>,
 }
 
 impl Map {
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
+    }
+
+    /// Returns a bool indicating whether the coordinates are a valid exit point (i.e. within bounds) on the map
+    fn is_exit_valid(&self, x: i32, y: i32) -> bool {
+        // x, y inside map?
+        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {
+            return false;
+        }
+
+        let idx = self.xy_idx(x, y);
+
+        !self.blocked[idx]
+    }
+
+    /// Sets blocked on a tile if its a wall
+    pub fn populate_blocked(&mut self) {
+        for (i, tile) in self.tiles.iter_mut().enumerate() {
+            self.blocked[i] = *tile == TileType::Wall;
+        }
     }
 
     fn apply_room_to_map(&mut self, room: &Rect) {
@@ -64,6 +85,7 @@ impl Map {
             tiles: vec![TileType::Wall; num_tiles],
             revealed_tiles: vec![false; num_tiles],
             visible_tiles: vec![false; num_tiles],
+            blocked: vec![false; num_tiles],
             rooms: Vec::new(),
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
@@ -120,6 +142,49 @@ impl Map {
     }
 }
 
+impl Algorithm2D for Map {
+    fn dimensions(&self) -> rltk::prelude::Point {
+        Point::new(self.width, self.height)
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx: usize) -> bool {
+        self.tiles[idx] == TileType::Wall
+    }
+
+    fn get_available_exits(&self, idx: usize) -> rltk::prelude::SmallVec<[(usize, f32); 10]> {
+        let mut exits = rltk::SmallVec::new();
+        let x = idx as i32 % self.width;
+        let y = idx as i32 / self.width;
+        let w = self.width as usize;
+
+        // Cardinal directions
+        if self.is_exit_valid(x - 1, y) {
+            exits.push((idx - 1, 1.0))
+        };
+        if self.is_exit_valid(x + 1, y) {
+            exits.push((idx + 1, 1.0))
+        };
+        if self.is_exit_valid(x, y - 1) {
+            exits.push((idx - w, 1.0))
+        };
+        if self.is_exit_valid(x, y + 1) {
+            exits.push((idx + w, 1.0))
+        };
+
+        exits
+    }
+
+    fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
+        let w = self.width as usize;
+        let p1 = Point::new(idx1 % w, idx1 / w);
+        let p2 = Point::new(idx2 % w, idx2 / w);
+
+        rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
+    }
+}
+
 pub fn draw_map(ecs: &World, ctx: &mut rltk::Rltk) {
     let mut viewsheds = ecs.write_storage::<Viewshed>();
     let mut players = ecs.write_storage::<Player>();
@@ -150,17 +215,5 @@ pub fn draw_map(ecs: &World, ctx: &mut rltk::Rltk) {
                 y += 1;
             }
         }
-    }
-}
-
-impl Algorithm2D for Map {
-    fn dimensions(&self) -> rltk::prelude::Point {
-        Point::new(self.width, self.height)
-    }
-}
-
-impl BaseMap for Map {
-    fn is_opaque(&self, idx: usize) -> bool {
-        self.tiles[idx] == TileType::Wall
     }
 }

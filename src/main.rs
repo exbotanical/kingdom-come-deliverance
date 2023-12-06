@@ -1,6 +1,6 @@
 use rltk::{self, Point};
 use rogue::{
-    components::{Monster, Name, Player, Position, Renderable, Viewshed},
+    components::{BlocksTile, Monster, Name, Player, Position, Renderable, Viewshed},
     map::Map,
     state::{RunState, State},
 };
@@ -23,6 +23,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
+    gs.ecs.register::<BlocksTile>();
 
     let map = Map::generate_map_rooms_and_tunnels();
 
@@ -56,6 +57,7 @@ fn main() -> rltk::BError {
             .with(Name {
                 name: format!("{} #{}", &name, i),
             })
+            .with(BlocksTile {})
             .build();
     }
 
