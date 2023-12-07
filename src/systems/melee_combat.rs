@@ -1,13 +1,17 @@
 use rltk::console;
 use specs::prelude::*;
 
-use crate::components::{CombatStats, Damage, DesiresMelee, Name};
+use crate::{
+    components::{CombatStats, Damage, DesiresMelee, Name},
+    log::GameLog,
+};
 
 pub struct MeleeCombatSystem {}
 
 impl<'a> System<'a> for MeleeCombatSystem {
     type SystemData = (
         Entities<'a>,
+        WriteExpect<'a, GameLog>,
         WriteStorage<'a, DesiresMelee>,
         ReadStorage<'a, Name>,
         ReadStorage<'a, CombatStats>,
@@ -15,7 +19,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (entities, mut desires_melee, names, combat_stats, mut damage) = data;
+        let (entities, mut log, mut desires_melee, names, combat_stats, mut damage) = data;
 
         for (_entity, desires_melee, name, stats) in
             (&entities, &desires_melee, &names, &combat_stats).join()
@@ -26,12 +30,12 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let target_name = names.get(desires_melee.target).unwrap();
                     let dmg = i32::max(0, stats.power - target_stats.defense);
                     if dmg == 0 {
-                        console::log(format!(
+                        log.entries.push(format!(
                             "{} did 0 damage to {}",
                             &name.name, &target_name.name
                         ));
                     } else {
-                        console::log(format!(
+                        log.entries.push(format!(
                             "{} hits {} for {} hp",
                             &name.name, &target_name.name, dmg
                         ));

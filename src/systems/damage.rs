@@ -1,7 +1,12 @@
+use std::fmt::format;
+
 use rltk::console;
 use specs::prelude::*;
 
-use crate::components::{CombatStats, Damage, Player};
+use crate::{
+    components::{CombatStats, Damage, Name, Player},
+    log,
+};
 
 pub struct DamageSystem {}
 
@@ -26,13 +31,22 @@ pub fn reap(ecs: &mut World) {
         let combat_stats = ecs.read_storage::<CombatStats>();
         let players = ecs.read_storage::<Player>();
         let entities = ecs.entities();
+        let names = ecs.read_storage::<Name>();
+
+        let mut log = ecs.write_resource::<log::GameLog>();
 
         for (entity, stats) in (&entities, &combat_stats).join() {
             if stats.hp < 1 {
                 let player = players.get(entity);
                 match player {
-                    None => dead.push(entity),
-                    Some(_) => console::log("you have died... :("),
+                    None => {
+                        let victim_name = names.get(entity);
+                        if let Some(n) = victim_name {
+                            log.entries.push(format!("{} has died", &n.name))
+                        }
+                        dead.push(entity)
+                    }
+                    Some(_) => log.entries.push("you have died... :(".to_string()),
                 }
             }
         }

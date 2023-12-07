@@ -4,6 +4,7 @@ use rogue::{
         BlocksTile, CombatStats, Damage, DesiresMelee, Monster, Name, Player, Position, Renderable,
         Viewshed,
     },
+    log,
     map::Map,
     state::{RunState, State},
 };
@@ -103,6 +104,9 @@ fn main() -> rltk::BError {
     gs.ecs.insert(map);
     gs.ecs.insert(Point::new(player_x, player_y));
     gs.ecs.insert(RunState::PreRun);
+    gs.ecs.insert(log::GameLog {
+        entries: vec!["lil boo mane - lil booney".to_string()],
+    });
 
     rltk::main_loop(context, gs)
 }

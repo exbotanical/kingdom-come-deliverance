@@ -8,6 +8,7 @@ use crate::{components::Viewshed, geometry::Rect};
 
 pub const MAP_WIDTH: i32 = 80;
 pub const MAP_HEIGHT: i32 = 50;
+pub const MAP_COUNT: i32 = MAP_HEIGHT * MAP_WIDTH;
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum TileType {
@@ -87,7 +88,7 @@ impl Map {
 
     /// Generates a map of rooms and connecting tunnels
     pub fn generate_map_rooms_and_tunnels() -> Map {
-        const num_tiles: usize = (MAP_WIDTH * MAP_HEIGHT) as usize;
+        const num_tiles: usize = (MAP_COUNT) as usize;
 
         let mut map = Map {
             tiles: vec![TileType::Wall; num_tiles],

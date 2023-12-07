@@ -2,7 +2,7 @@ use rltk::Point;
 use specs::prelude::*;
 
 use crate::{
-    components::{DesiresMelee, Monster, Name, Position, Viewshed},
+    components::{DesiresMelee, Monster, Position, Viewshed},
     map::Map,
     state::RunState,
 };

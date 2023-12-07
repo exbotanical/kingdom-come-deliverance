@@ -4,6 +4,7 @@ use specs::World;
 
 use crate::components::Position;
 use crate::components::Renderable;
+use crate::gui;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
@@ -90,5 +91,7 @@ impl rltk::GameState for State {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
         }
+
+        gui::draw_ui(&self.ecs, ctx);
     }
 }
