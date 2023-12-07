@@ -34,3 +34,34 @@ pub struct Monster {}
 
 #[derive(Component)]
 pub struct BlocksTile {}
+
+#[derive(Component, Debug)]
+pub struct CombatStats {
+    pub max_hp: i32,
+    pub hp: i32,
+    pub defense: i32,
+    pub power: i32,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct DesiresMelee {
+    pub target: Entity,
+}
+
+#[derive(Component, Debug)]
+pub struct Damage {
+    pub amount: Vec<i32>,
+}
+
+impl Damage {
+    pub fn new_damage(store: &mut WriteStorage<Damage>, victim: Entity, amount: i32) {
+        if let Some(dmg) = store.get_mut(victim) {
+            dmg.amount.push(amount);
+        } else {
+            let dmg = Damage {
+                amount: vec![amount],
+            };
+            store.insert(victim, dmg).expect("unable to insert damage");
+        }
+    }
+}

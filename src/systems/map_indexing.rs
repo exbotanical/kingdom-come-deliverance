@@ -12,16 +12,25 @@ impl<'a> System<'a> for MapIndexingSystem {
         WriteExpect<'a, Map>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, BlocksTile>,
+        Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut map, pos, blockers) = data;
+        let (mut map, pos, blockers, entities) = data;
 
         map.populate_blocked();
+        map.clear_content_idx();
 
-        for (pos, _blocks) in (&pos, &blockers).join() {
+        for (entity, pos) in (&entities, &pos).join() {
             let idx = map.xy_idx(pos.x, pos.y);
-            map.blocked[idx] = true;
+
+            let _p = blockers.get(entity);
+            if let Some(_p) = _p {
+                map.blocked[idx] = true;
+            }
+
+            // Copy entity into the indexed slot
+            map.tile_content[idx].push(entity);
         }
     }
 }

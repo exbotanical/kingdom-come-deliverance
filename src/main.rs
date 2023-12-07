@@ -1,6 +1,9 @@
 use rltk::{self, Point};
 use rogue::{
-    components::{BlocksTile, Monster, Name, Player, Position, Renderable, Viewshed},
+    components::{
+        BlocksTile, CombatStats, Damage, DesiresMelee, Monster, Name, Player, Position, Renderable,
+        Viewshed,
+    },
     map::Map,
     state::{RunState, State},
 };
@@ -24,6 +27,9 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<DesiresMelee>();
+    gs.ecs.register::<Damage>();
 
     let map = Map::generate_map_rooms_and_tunnels();
 
@@ -57,6 +63,12 @@ fn main() -> rltk::BError {
             .with(Name {
                 name: format!("{} #{}", &name, i),
             })
+            .with(CombatStats {
+                max_hp: 16,
+                hp: 16,
+                defense: 1,
+                power: 4,
+            })
             .with(BlocksTile {})
             .build();
     }
@@ -64,7 +76,8 @@ fn main() -> rltk::BError {
     gs.ecs.insert(map);
     gs.ecs.insert(Point::new(player_x, player_y));
 
-    gs.ecs
+    let player_entity = gs
+        .ecs
         .create_entity()
         .with(Position {
             x: player_x,
@@ -79,12 +92,20 @@ fn main() -> rltk::BError {
         .with(Name {
             name: "Player".to_string(),
         })
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        })
         .with(Viewshed {
             visible_tiles: Vec::new(),
             range: 8,
             dirty: true,
         })
         .build();
+
+    gs.ecs.insert(player_entity);
 
     rltk::main_loop(context, gs)
 }

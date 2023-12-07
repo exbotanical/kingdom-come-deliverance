@@ -24,11 +24,19 @@ pub struct Map {
     pub height: i32,
     // Is the point blocked by something?
     pub blocked: Vec<bool>,
+    pub tile_content: Vec<Vec<Entity>>,
 }
 
 impl Map {
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
+    }
+
+    /// Visits each vector in tile_content and clears it
+    pub fn clear_content_idx(&mut self) {
+        for content in self.tile_content.iter_mut() {
+            content.clear();
+        }
     }
 
     /// Returns a bool indicating whether the coordinates are a valid exit point (i.e. within bounds) on the map
@@ -89,6 +97,7 @@ impl Map {
             rooms: Vec::new(),
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
+            tile_content: vec![Vec::new(); num_tiles],
         };
 
         // The max number of rooms to generate
@@ -172,6 +181,20 @@ impl BaseMap for Map {
         if self.is_exit_valid(x, y + 1) {
             exits.push((idx + w, 1.0))
         };
+
+        // Diagonals
+        if self.is_exit_valid(x - 1, y - 1) {
+            exits.push(((idx - w) - 1, 1.45));
+        }
+        if self.is_exit_valid(x + 1, y - 1) {
+            exits.push(((idx - w) + 1, 1.45));
+        }
+        if self.is_exit_valid(x - 1, y + 1) {
+            exits.push(((idx + w) - 1, 1.45));
+        }
+        if self.is_exit_valid(x + 1, y + 1) {
+            exits.push(((idx + w) + 1, 1.45));
+        }
 
         exits
     }

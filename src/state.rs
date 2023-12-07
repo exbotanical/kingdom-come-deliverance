@@ -8,7 +8,11 @@ use crate::map;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
+use crate::systems::damage;
+use crate::systems::damage::reap;
+use crate::systems::DamageSystem;
 use crate::systems::MapIndexingSystem;
+use crate::systems::MeleeCombatSystem;
 use crate::systems::MonsterAISystem;
 use crate::systems::VisibilitySystem;
 
@@ -34,6 +38,12 @@ impl State {
         let mut map_idx = MapIndexingSystem {};
         map_idx.run_now(&self.ecs);
 
+        let mut melee = MeleeCombatSystem {};
+        melee.run_now(&self.ecs);
+
+        let mut damage = DamageSystem {};
+        damage.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
@@ -44,6 +54,8 @@ impl rltk::GameState for State {
 
         if self.run_state == RunState::Running {
             self.run_systems();
+            damage::reap(&mut self.ecs);
+
             self.run_state = RunState::Paused;
         } else {
             self.run_state = player_input(self, ctx);
