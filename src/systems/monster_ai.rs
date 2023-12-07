@@ -2,8 +2,9 @@ use rltk::Point;
 use specs::prelude::*;
 
 use crate::{
-    components::{DesiresMelee, Monster, Position, Viewshed},
+    components::{DesiresMelee, Monster, Name, Position, Viewshed},
     map::Map,
+    state::RunState,
 };
 
 pub struct MonsterAISystem {}
@@ -13,6 +14,7 @@ impl<'a> System<'a> for MonsterAISystem {
         WriteExpect<'a, Map>,
         ReadExpect<'a, Point>,
         ReadExpect<'a, Entity>,
+        ReadExpect<'a, RunState>,
         Entities<'a>,
         WriteStorage<'a, Viewshed>,
         ReadStorage<'a, Monster>,
@@ -25,12 +27,17 @@ impl<'a> System<'a> for MonsterAISystem {
             mut map,
             player_pos,
             player_entity,
+            runstate,
             entities,
             mut viewshed,
             monster,
             mut position,
             mut desires_melee,
         ) = data;
+
+        if *runstate != RunState::MonsterTurn {
+            return;
+        }
 
         for (entity, mut viewshed, _monster, mut pos) in
             (&entities, &mut viewshed, &monster, &mut position).join()

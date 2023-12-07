@@ -15,10 +15,7 @@ fn main() -> rltk::BError {
         .with_title("roguelike whatever")
         .build()?;
 
-    let mut gs = State {
-        ecs: World::new(),
-        run_state: RunState::Running,
-    };
+    let mut gs = State { ecs: World::new() };
 
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
@@ -73,9 +70,6 @@ fn main() -> rltk::BError {
             .build();
     }
 
-    gs.ecs.insert(map);
-    gs.ecs.insert(Point::new(player_x, player_y));
-
     let player_entity = gs
         .ecs
         .create_entity()
@@ -106,6 +100,9 @@ fn main() -> rltk::BError {
         .build();
 
     gs.ecs.insert(player_entity);
+    gs.ecs.insert(map);
+    gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(RunState::PreRun);
 
     rltk::main_loop(context, gs)
 }

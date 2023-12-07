@@ -4,12 +4,10 @@ use specs::World;
 
 use crate::components::Position;
 use crate::components::Renderable;
-use crate::map;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
 use crate::systems::damage;
-use crate::systems::damage::reap;
 use crate::systems::DamageSystem;
 use crate::systems::MapIndexingSystem;
 use crate::systems::MeleeCombatSystem;
@@ -18,13 +16,14 @@ use crate::systems::VisibilitySystem;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum RunState {
-    Paused,
-    Running,
+    AwaitingInput,
+    PreRun,
+    PlayerTurn,
+    MonsterTurn,
 }
 
 pub struct State {
     pub ecs: World,
-    pub run_state: RunState,
 }
 
 impl State {
@@ -52,14 +51,32 @@ impl rltk::GameState for State {
     fn tick(&mut self, ctx: &mut rltk::Rltk) {
         ctx.cls();
 
-        if self.run_state == RunState::Running {
-            self.run_systems();
-            damage::reap(&mut self.ecs);
+        let mut run_state = *self.ecs.fetch::<RunState>();
 
-            self.run_state = RunState::Paused;
-        } else {
-            self.run_state = player_input(self, ctx);
+        match run_state {
+            RunState::PreRun => {
+                self.run_systems();
+                run_state = RunState::AwaitingInput;
+            }
+            RunState::AwaitingInput => {
+                run_state = player_input(self, ctx);
+            }
+            RunState::PlayerTurn => {
+                self.run_systems();
+                run_state = RunState::MonsterTurn;
+            }
+            RunState::MonsterTurn => {
+                self.run_systems();
+                run_state = RunState::AwaitingInput;
+            }
         }
+
+        {
+            let mut run_writer = self.ecs.write_resource::<RunState>();
+            *run_writer = run_state;
+        }
+
+        damage::reap(&mut self.ecs);
 
         draw_map(&self.ecs, ctx);
 
