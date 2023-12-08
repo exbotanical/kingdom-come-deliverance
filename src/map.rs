@@ -7,7 +7,7 @@ use crate::components::Player;
 use crate::{components::Viewshed, geometry::Rect};
 
 pub const MAP_WIDTH: i32 = 80;
-pub const MAP_HEIGHT: i32 = 50;
+pub const MAP_HEIGHT: i32 = 43;
 pub const MAP_COUNT: i32 = MAP_HEIGHT * MAP_WIDTH;
 
 #[derive(PartialEq, Clone, Copy, Debug)]

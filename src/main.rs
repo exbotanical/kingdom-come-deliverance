@@ -6,6 +6,7 @@ use rogue::{
     },
     log,
     map::Map,
+    spawn,
     state::{RunState, State},
 };
 use specs::prelude::*;
@@ -35,72 +36,13 @@ fn main() -> rltk::BError {
 
     let (player_x, player_y) = map.rooms[0].center();
 
-    let mut rng = rltk::RandomNumberGenerator::new();
+    gs.ecs.insert(rltk::RandomNumberGenerator::new());
 
-    for (i, room) in map.rooms.iter().skip(1).enumerate() {
-        let (x, y) = room.center();
-
-        let roll = rng.roll_dice(1, 2);
-        let (glyph, name) = match roll {
-            1 => (rltk::to_cp437('g'), "Goblin".to_string()),
-            _ => (rltk::to_cp437('o'), "Orc".to_string()),
-        };
-
-        gs.ecs
-            .create_entity()
-            .with(Position { x, y })
-            .with(Renderable {
-                glyph,
-                fg: rltk::RGB::named(rltk::RED),
-                bg: rltk::RGB::named(rltk::BLACK),
-            })
-            .with(Viewshed {
-                visible_tiles: Vec::new(),
-                range: 8,
-                dirty: true,
-            })
-            .with(Monster {})
-            .with(Name {
-                name: format!("{} #{}", &name, i),
-            })
-            .with(CombatStats {
-                max_hp: 16,
-                hp: 16,
-                defense: 1,
-                power: 4,
-            })
-            .with(BlocksTile {})
-            .build();
+    for room in map.rooms.iter().skip(1) {
+        spawn::spawn_room(&mut gs.ecs, room);
     }
 
-    let player_entity = gs
-        .ecs
-        .create_entity()
-        .with(Position {
-            x: player_x,
-            y: player_y,
-        })
-        .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            fg: rltk::RGB::named(rltk::YELLOW),
-            bg: rltk::RGB::named(rltk::BLACK),
-        })
-        .with(Player {})
-        .with(Name {
-            name: "Player".to_string(),
-        })
-        .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
-            defense: 2,
-            power: 5,
-        })
-        .with(Viewshed {
-            visible_tiles: Vec::new(),
-            range: 8,
-            dirty: true,
-        })
-        .build();
+    let player_entity = spawn::player(&mut gs.ecs, player_x, player_y);
 
     gs.ecs.insert(player_entity);
     gs.ecs.insert(map);
