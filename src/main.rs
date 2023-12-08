@@ -12,9 +12,11 @@ use specs::prelude::*;
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
-    let context = RltkBuilder::simple80x50()
-        .with_title("roguelike whatever")
+    let mut ctx = RltkBuilder::simple80x50()
+        .with_title("roguelike is a stupid genre")
         .build()?;
+
+    ctx.with_post_scanlines(true);
 
     let mut gs = State { ecs: World::new() };
 
@@ -108,5 +110,5 @@ fn main() -> rltk::BError {
         entries: vec!["lil boo mane - lil booney".to_string()],
     });
 
-    rltk::main_loop(context, gs)
+    rltk::main_loop(ctx, gs)
 }
