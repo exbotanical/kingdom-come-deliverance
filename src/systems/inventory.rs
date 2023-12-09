@@ -67,7 +67,7 @@ impl<'a> System<'a> for PotionUseSystem {
             let potion = potions.get(consumer.potion);
             match potion {
                 Some(p) => {
-                    stats.hp += i32::min(stats.max_hp, stats.hp + p.heal_amt);
+                    stats.hp = i32::min(stats.max_hp, stats.hp + p.heal_amt);
 
                     if entity == *player {
                         log.entries.push(format!(
