@@ -2,13 +2,18 @@ use rltk::{self};
 use specs::prelude::*;
 use specs::World;
 
+use crate::components::DesiresUsePotion;
+use crate::components::Name;
 use crate::components::Position;
 use crate::components::Renderable;
 use crate::gui;
+use crate::log::GameLog;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
 use crate::systems::damage;
+use crate::systems::inventory::ItemAcquisitionSystem;
+use crate::systems::inventory::PotionUseSystem;
 use crate::systems::DamageSystem;
 use crate::systems::MapIndexingSystem;
 use crate::systems::MeleeCombatSystem;
@@ -21,6 +26,7 @@ pub enum RunState {
     PreRun,
     PlayerTurn,
     MonsterTurn,
+    ShowInventory,
 }
 
 pub struct State {
@@ -44,6 +50,12 @@ impl State {
         let mut damage = DamageSystem {};
         damage.run_now(&self.ecs);
 
+        let mut acquisitions = ItemAcquisitionSystem {};
+        acquisitions.run_now(&self.ecs);
+
+        let mut potions = PotionUseSystem {};
+        potions.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
@@ -57,6 +69,7 @@ impl rltk::GameState for State {
         match run_state {
             RunState::PreRun => {
                 self.run_systems();
+                self.ecs.maintain(); // cleanup delete items during systems run
                 run_state = RunState::AwaitingInput;
             }
             RunState::AwaitingInput => {
@@ -64,11 +77,35 @@ impl rltk::GameState for State {
             }
             RunState::PlayerTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 run_state = RunState::MonsterTurn;
             }
             RunState::MonsterTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 run_state = RunState::AwaitingInput;
+            }
+            RunState::ShowInventory => {
+                let result = gui::show_inventory(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
+                    gui::ItemMenuResult::Selected => {
+                        let selected_item = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<DesiresUsePotion>();
+                        let entity = self.ecs.fetch::<Entity>();
+
+                        intent
+                            .insert(
+                                *entity,
+                                DesiresUsePotion {
+                                    potion: selected_item,
+                                },
+                            )
+                            .expect("Failed to insert intent");
+                        run_state = RunState::PlayerTurn;
+                    }
+                }
             }
         }
 

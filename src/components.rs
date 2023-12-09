@@ -73,3 +73,19 @@ pub struct Item {}
 pub struct Potion {
     pub heal_amt: i32,
 }
+
+#[derive(Component, Debug, Clone)]
+pub struct InInventory {
+    pub owner: Entity,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct DesiresAcquireItem {
+    pub acquired_by: Entity,
+    pub item: Entity,
+}
+
+#[derive(Component, Debug)]
+pub struct DesiresUsePotion {
+    pub potion: Entity,
+}

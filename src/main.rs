@@ -1,8 +1,8 @@
 use rltk::{self, Point};
 use rogue::{
     components::{
-        BlocksTile, CombatStats, Damage, DesiresMelee, Item, Monster, Name, Player, Position,
-        Potion, Renderable, Viewshed,
+        BlocksTile, CombatStats, Damage, DesiresAcquireItem, DesiresMelee, DesiresUsePotion,
+        InInventory, Item, Monster, Name, Player, Position, Potion, Renderable, Viewshed,
     },
     log,
     map::Map,
@@ -33,6 +33,9 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Damage>();
     gs.ecs.register::<Item>();
     gs.ecs.register::<Potion>();
+    gs.ecs.register::<InInventory>();
+    gs.ecs.register::<DesiresAcquireItem>();
+    gs.ecs.register::<DesiresUsePotion>();
 
     let map = Map::generate_map_rooms_and_tunnels();
 

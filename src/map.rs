@@ -1,4 +1,4 @@
-use rltk::{self, Algorithm2D, BaseMap, Point, RandomNumberGenerator, Tile};
+use rltk::{self, Algorithm2D, BaseMap, Point, RandomNumberGenerator};
 use specs::prelude::*;
 use specs::World;
 use std::cmp::{max, min};

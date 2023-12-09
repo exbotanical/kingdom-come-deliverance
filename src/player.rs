@@ -1,10 +1,11 @@
-use rltk::{self, console, Point};
+use rltk::{self, Point};
 use specs::prelude::*;
 use std::cmp::{max, min};
 
 use crate::{
-    components::{CombatStats, DesiresMelee, Player, Position, Viewshed},
-    map::{Map, TileType, MAP_HEIGHT, MAP_WIDTH},
+    components::{CombatStats, DesiresAcquireItem, DesiresMelee, Item, Player, Position, Viewshed},
+    log::GameLog,
+    map::{Map, MAP_HEIGHT, MAP_WIDTH},
     state::{RunState, State},
 };
 
@@ -88,9 +89,48 @@ pub fn player_input(gs: &mut State, ctx: &mut rltk::Rltk) -> RunState {
                 try_move_player(-1, 1, &mut gs.ecs)
             }
 
+            rltk::VirtualKeyCode::G => acquire_item(&mut gs.ecs),
+
+            rltk::VirtualKeyCode::I => return RunState::ShowInventory,
+
             _ => return RunState::AwaitingInput,
         },
     }
 
     RunState::PlayerTurn
+}
+
+fn acquire_item(ecs: &mut World) {
+    let player_pos = ecs.fetch::<Point>();
+    let player_entity = ecs.fetch::<Entity>();
+    let entities = ecs.entities();
+    let items = ecs.read_storage::<Item>();
+    let positions = ecs.read_storage::<Position>();
+    let mut log = ecs.fetch_mut::<GameLog>();
+
+    let mut target_item: Option<Entity> = None;
+
+    for (entity, item, pos) in (&entities, &items, &positions).join() {
+        if pos.x == player_pos.x && pos.y == player_pos.y {
+            target_item = Some(entity);
+        }
+    }
+
+    match target_item {
+        None => log
+            .entries
+            .push("There's nothing to pick up here.".to_string()),
+        Some(item) => {
+            let mut acquisition = ecs.write_storage::<DesiresAcquireItem>();
+            acquisition
+                .insert(
+                    *player_entity,
+                    DesiresAcquireItem {
+                        acquired_by: *player_entity,
+                        item,
+                    },
+                )
+                .expect("msg");
+        }
+    }
 }

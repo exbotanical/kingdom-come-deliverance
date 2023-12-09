@@ -118,7 +118,7 @@ where
     for idx in points.iter() {
         let x = *idx as i32 % MAP_WIDTH;
         let y = *idx as i32 / MAP_WIDTH;
-        random_monster(ecs, x, y);
+        cb(ecs, x, y);
     }
 }
 
@@ -130,7 +130,6 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
 
         let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-        println!("num_monsters {} ", num_monsters);
         monster_spawn_points = generate_spawn_points(&mut rng, room, num_monsters);
 
         let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
