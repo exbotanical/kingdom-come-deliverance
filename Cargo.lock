@@ -1491,15 +1491,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rogue"
-version = "0.1.0"
-dependencies = [
- "rltk",
- "specs",
- "specs-derive",
-]
-
-[[package]]
 name = "safe_arch"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2032,6 +2023,15 @@ checksum = "50c24a44ec86bb68fbecd1b3efed7e85ea5621b39b35ef2766b66cd984f8010f"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "whatever"
+version = "0.1.0"
+dependencies = [
+ "rltk",
+ "specs",
+ "specs-derive",
 ]
 
 [[package]]

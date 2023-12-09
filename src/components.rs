@@ -89,3 +89,8 @@ pub struct DesiresAcquireItem {
 pub struct DesiresUsePotion {
     pub potion: Entity,
 }
+
+#[derive(Component, Debug, Clone)]
+pub struct DesiresDropItem {
+    pub item: Entity,
+}

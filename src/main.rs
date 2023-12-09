@@ -1,20 +1,21 @@
 use rltk::{self, Point};
-use rogue::{
+use specs::prelude::*;
+use whatever::{
     components::{
-        BlocksTile, CombatStats, Damage, DesiresAcquireItem, DesiresMelee, DesiresUsePotion,
-        InInventory, Item, Monster, Name, Player, Position, Potion, Renderable, Viewshed,
+        BlocksTile, CombatStats, Damage, DesiresAcquireItem, DesiresDropItem, DesiresMelee,
+        DesiresUsePotion, InInventory, Item, Monster, Name, Player, Position, Potion, Renderable,
+        Viewshed,
     },
     log,
     map::Map,
     spawn,
     state::{RunState, State},
 };
-use specs::prelude::*;
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let mut ctx = RltkBuilder::simple80x50()
-        .with_title("roguelike is a stupid genre")
+        .with_title("whatever game")
         .build()?;
 
     ctx.with_post_scanlines(true);
@@ -36,6 +37,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<InInventory>();
     gs.ecs.register::<DesiresAcquireItem>();
     gs.ecs.register::<DesiresUsePotion>();
+    gs.ecs.register::<DesiresDropItem>();
 
     let map = Map::generate_map_rooms_and_tunnels();
 

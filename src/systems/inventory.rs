@@ -2,7 +2,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        CombatStats, DesiresAcquireItem, DesiresUsePotion, InInventory, Name, Position, Potion,
+        CombatStats, DesiresAcquireItem, DesiresDropItem, DesiresUsePotion, InInventory, Name,
+        Position, Potion,
     },
     log::GameLog,
 };
@@ -85,5 +86,47 @@ impl<'a> System<'a> for PotionUseSystem {
         }
 
         desires_potion.clear();
+    }
+}
+
+pub struct ItemDropSystem {}
+
+impl<'a> System<'a> for ItemDropSystem {
+    type SystemData = (
+        ReadExpect<'a, Entity>,
+        WriteExpect<'a, GameLog>,
+        Entities<'a>,
+        WriteStorage<'a, DesiresDropItem>,
+        ReadStorage<'a, Name>,
+        WriteStorage<'a, Position>,
+        WriteStorage<'a, InInventory>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (player, mut log, entities, mut desires_drop, names, mut positions, mut inventory) =
+            data;
+
+        for (entity, drop_intent) in (&entities, &desires_drop).join() {
+            let mut drop_pos = Position { x: 0, y: 0 };
+
+            let current_pos = positions.get(entity).unwrap();
+            drop_pos.x = current_pos.x;
+            drop_pos.y = current_pos.y;
+
+            positions
+                .insert(drop_intent.item, drop_pos)
+                .expect("failed to insert drop position");
+
+            inventory.remove(drop_intent.item);
+
+            if entity == *player {
+                log.entries.push(format!(
+                    "You dropped the {}",
+                    names.get(drop_intent.item).unwrap().name,
+                ));
+            }
+        }
+
+        desires_drop.clear();
     }
 }
