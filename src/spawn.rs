@@ -3,8 +3,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        BlocksTile, CombatStats, Item, Monster, Name, Player, Position, Potion, Renderable,
-        Viewshed,
+        BlocksTile, CombatStats, Consumable, Item, Monster, Name, Player, Position,
+        ProvidesHealing, Renderable, Viewshed,
     },
     geometry::Rect,
     map::MAP_WIDTH,
@@ -156,6 +156,7 @@ pub fn health_potion(ecs: &mut World, x: i32, y: i32) {
             name: "Health Potion".to_string(),
         })
         .with(Item {})
-        .with(Potion { heal_amt: 8 })
+        .with(Consumable {})
+        .with(ProvidesHealing { heal_amount: 8 })
         .build();
 }

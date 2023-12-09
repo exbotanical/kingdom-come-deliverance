@@ -3,7 +3,7 @@ use specs::prelude::*;
 use specs::World;
 
 use crate::components::DesiresDropItem;
-use crate::components::DesiresUsePotion;
+use crate::components::DesiresUseItem;
 use crate::components::Position;
 use crate::components::Renderable;
 use crate::gui;
@@ -13,7 +13,7 @@ use crate::player::player_input;
 use crate::systems::damage;
 use crate::systems::inventory::ItemAcquisitionSystem;
 use crate::systems::inventory::ItemDropSystem;
-use crate::systems::inventory::PotionUseSystem;
+use crate::systems::inventory::ItemUseSystem;
 use crate::systems::DamageSystem;
 use crate::systems::MapIndexingSystem;
 use crate::systems::MeleeCombatSystem;
@@ -54,8 +54,8 @@ impl State {
         let mut acquisitions = ItemAcquisitionSystem {};
         acquisitions.run_now(&self.ecs);
 
-        let mut potions = PotionUseSystem {};
-        potions.run_now(&self.ecs);
+        let mut items = ItemUseSystem {};
+        items.run_now(&self.ecs);
 
         let mut drops = ItemDropSystem {};
         drops.run_now(&self.ecs);
@@ -96,14 +96,15 @@ impl rltk::GameState for State {
                     gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
                     gui::ItemMenuResult::Selected => {
                         let selected_item = result.1.unwrap();
-                        let mut intent = self.ecs.write_storage::<DesiresUsePotion>();
+                        let mut intent = self.ecs.write_storage::<DesiresUseItem>();
                         let entity = self.ecs.fetch::<Entity>();
 
                         intent
                             .insert(
                                 *entity,
-                                DesiresUsePotion {
-                                    potion: selected_item,
+                                DesiresUseItem {
+                                    item: selected_item,
+                                    target: None,
                                 },
                             )
                             .expect("Failed to insert intent");

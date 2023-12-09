@@ -2,8 +2,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        CombatStats, DesiresAcquireItem, DesiresDropItem, DesiresUsePotion, InInventory, Name,
-        Position, Potion,
+        CombatStats, Consumable, DesiresAcquireItem, DesiresDropItem, DesiresUseItem, InInventory,
+        Name, Position, ProvidesHealing,
     },
     log::GameLog,
 };
@@ -46,46 +46,80 @@ impl<'a> System<'a> for ItemAcquisitionSystem {
     }
 }
 
-pub struct PotionUseSystem {}
+pub struct ItemUseSystem {}
 
-impl<'a> System<'a> for PotionUseSystem {
+impl<'a> System<'a> for ItemUseSystem {
     type SystemData = (
         ReadExpect<'a, Entity>,
         WriteExpect<'a, GameLog>,
         Entities<'a>,
-        WriteStorage<'a, DesiresUsePotion>,
+        WriteStorage<'a, DesiresUseItem>,
         ReadStorage<'a, Name>,
-        ReadStorage<'a, Potion>,
+        ReadStorage<'a, Consumable>,
+        ReadStorage<'a, ProvidesHealing>,
         WriteStorage<'a, CombatStats>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (player, mut log, entities, mut desires_potion, names, potions, mut combat_stats) =
-            data;
+        let (
+            player,
+            mut log,
+            entities,
+            mut desires_use,
+            names,
+            consumables,
+            heals,
+            mut combat_stats,
+        ) = data;
 
-        for (entity, consumer, stats) in (&entities, &desires_potion, &mut combat_stats).join() {
-            let potion = potions.get(consumer.potion);
-            match potion {
-                Some(p) => {
-                    stats.hp = i32::min(stats.max_hp, stats.hp + p.heal_amt);
+        for (entity, desires_use) in (&entities, &desires_use).join() {
+            let mut used_item = false;
+            let mut targets: Vec<Entity> = Vec::new();
 
-                    if entity == *player {
-                        log.entries.push(format!(
-                            "You consume the {}, healing {} hp",
-                            &names.get(consumer.potion).unwrap().name,
-                            p.heal_amt
-                        ));
+            match desires_use.target {
+                None => targets.push(*player),
+                Some(t) => {}
+            }
 
-                        entities
-                            .delete(consumer.potion)
-                            .expect("delete potion failed");
+            let item_heals = heals.get(desires_use.item);
+            match item_heals {
+                None => {}
+                Some(healer) => {
+                    used_item = false;
+
+                    for target in targets.iter() {
+                        let stats = combat_stats.get_mut(*target);
+
+                        if let Some(stats) = stats {
+                            stats.hp = i32::min(stats.max_hp, stats.hp + healer.heal_amount);
+
+                            if entity == *player {
+                                log.entries.push(format!(
+                                    "You consume the {}, healing {} hp",
+                                    &names.get(desires_use.item).unwrap().name,
+                                    healer.heal_amount
+                                ));
+                                used_item = true;
+                            }
+                        }
                     }
                 }
-                None => {}
+            }
+
+            if used_item {
+                let consumable = consumables.get(desires_use.item);
+                match consumable {
+                    Some(_) => {
+                        entities
+                            .delete(desires_use.item)
+                            .expect("delete item failed");
+                    }
+                    None => {}
+                }
             }
         }
 
-        desires_potion.clear();
+        desires_use.clear();
     }
 }
 

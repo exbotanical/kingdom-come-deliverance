@@ -70,11 +70,6 @@ impl Damage {
 #[derive(Component, Debug)]
 pub struct Item {}
 
-#[derive(Component, Debug)]
-pub struct Potion {
-    pub heal_amt: i32,
-}
-
 #[derive(Component, Debug, Clone)]
 pub struct InInventory {
     pub owner: Entity,
@@ -87,11 +82,21 @@ pub struct DesiresAcquireItem {
 }
 
 #[derive(Component, Debug)]
-pub struct DesiresUsePotion {
-    pub potion: Entity,
+pub struct DesiresUseItem {
+    pub item: Entity,
+    pub target: Option<Entity>,
 }
 
 #[derive(Component, Debug, Clone)]
 pub struct DesiresDropItem {
     pub item: Entity,
+}
+
+/// Indicates an item can be used (at which point it is destroyed)
+#[derive(Component, Debug)]
+pub struct Consumable {}
+
+#[derive(Component, Debug)]
+pub struct ProvidesHealing {
+    pub heal_amount: i32,
 }
