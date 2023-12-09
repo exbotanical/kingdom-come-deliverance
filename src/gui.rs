@@ -6,7 +6,6 @@ use crate::{
     log,
     map::Map,
     state::State,
-    systems::inventory,
 };
 
 pub fn draw_ui(ecs: &World, ctx: &mut rltk::Rltk) {

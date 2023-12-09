@@ -112,7 +112,7 @@ fn acquire_item(ecs: &mut World) {
 
     let mut target_item: Option<Entity> = None;
 
-    for (entity, item, pos) in (&entities, &items, &positions).join() {
+    for (entity, _item, pos) in (&entities, &items, &positions).join() {
         if pos.x == player_pos.x && pos.y == player_pos.y {
             target_item = Some(entity);
         }

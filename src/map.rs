@@ -8,7 +8,7 @@ use crate::{components::Viewshed, geometry::Rect};
 
 pub const MAP_WIDTH: i32 = 80;
 pub const MAP_HEIGHT: i32 = 43;
-pub const MAP_COUNT: i32 = MAP_HEIGHT * MAP_WIDTH;
+pub const MAP_COUNT: usize = (MAP_HEIGHT * MAP_WIDTH) as usize;
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum TileType {
@@ -88,17 +88,15 @@ impl Map {
 
     /// Generates a map of rooms and connecting tunnels
     pub fn generate_map_rooms_and_tunnels() -> Map {
-        const num_tiles: usize = (MAP_COUNT) as usize;
-
         let mut map = Map {
-            tiles: vec![TileType::Wall; num_tiles],
-            revealed_tiles: vec![false; num_tiles],
-            visible_tiles: vec![false; num_tiles],
-            blocked: vec![false; num_tiles],
+            tiles: vec![TileType::Wall; MAP_COUNT],
+            revealed_tiles: vec![false; MAP_COUNT],
+            visible_tiles: vec![false; MAP_COUNT],
+            blocked: vec![false; MAP_COUNT],
             rooms: Vec::new(),
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
-            tile_content: vec![Vec::new(); num_tiles],
+            tile_content: vec![Vec::new(); MAP_COUNT],
         };
 
         // The max number of rooms to generate
@@ -214,7 +212,7 @@ pub fn draw_map(ecs: &World, ctx: &mut rltk::Rltk) {
     let mut players = ecs.write_storage::<Player>();
     let map = ecs.fetch::<Map>();
 
-    for (_player, viewshed) in (&mut players, &mut viewsheds).join() {
+    for (_player, _viewshed) in (&mut players, &mut viewsheds).join() {
         let mut x = 0;
         let mut y = 0;
 

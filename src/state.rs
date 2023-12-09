@@ -4,11 +4,9 @@ use specs::World;
 
 use crate::components::DesiresDropItem;
 use crate::components::DesiresUsePotion;
-use crate::components::Name;
 use crate::components::Position;
 use crate::components::Renderable;
 use crate::gui;
-use crate::log::GameLog;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
@@ -147,7 +145,10 @@ impl rltk::GameState for State {
         let renderables = self.ecs.read_storage::<Renderable>();
         let map = self.ecs.fetch::<Map>();
 
-        for (pos, render) in (&positions, &renderables).join() {
+        let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+        data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
+
+        for (pos, render) in data.iter() {
             let idx = map.xy_idx(pos.x, pos.y);
             if map.visible_tiles[idx] {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
