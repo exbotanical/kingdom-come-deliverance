@@ -1,3 +1,4 @@
+use rltk::Point;
 use specs::prelude::*;
 use specs_derive::Component;
 
@@ -84,7 +85,7 @@ pub struct DesiresAcquireItem {
 #[derive(Component, Debug)]
 pub struct DesiresUseItem {
     pub item: Entity,
-    pub target: Option<Entity>,
+    pub target: Option<Point>,
 }
 
 #[derive(Component, Debug, Clone)]
@@ -99,4 +100,31 @@ pub struct Consumable {}
 #[derive(Component, Debug)]
 pub struct ProvidesHealing {
     pub heal_amount: i32,
+}
+
+#[derive(Component, Debug)]
+pub struct Ranged {
+    pub range: i32,
+}
+
+#[derive(Component, Debug)]
+pub struct InflictsDamage {
+    pub damage: i32,
+}
+
+#[derive(Component, Debug)]
+pub struct AreaOfEffect {
+    pub radius: i32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum StatusEffectType {
+    Confusion,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct StatusEffect {
+    pub effect: StatusEffectType,
+    pub print_as: String,
+    pub turns: i32,
 }

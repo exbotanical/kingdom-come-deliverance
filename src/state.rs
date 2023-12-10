@@ -5,6 +5,7 @@ use specs::World;
 use crate::components::DesiresDropItem;
 use crate::components::DesiresUseItem;
 use crate::components::Position;
+use crate::components::Ranged;
 use crate::components::Renderable;
 use crate::gui;
 use crate::map::draw_map;
@@ -28,6 +29,7 @@ pub enum RunState {
     MonsterTurn,
     ShowInventory,
     ShowDropItem,
+    ShowTargeting { range: i32, item: Entity },
 }
 
 pub struct State {
@@ -92,23 +94,33 @@ impl rltk::GameState for State {
             RunState::ShowInventory => {
                 let result = gui::show_inventory(self, ctx);
                 match result.0 {
-                    gui::ItemMenuResult::NoResponse => {}
                     gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
                     gui::ItemMenuResult::Selected => {
                         let selected_item = result.1.unwrap();
-                        let mut intent = self.ecs.write_storage::<DesiresUseItem>();
-                        let entity = self.ecs.fetch::<Entity>();
+                        let ranged = self.ecs.read_storage::<Ranged>();
+                        let maybe_ranged_item = ranged.get(selected_item);
 
-                        intent
-                            .insert(
-                                *entity,
-                                DesiresUseItem {
-                                    item: selected_item,
-                                    target: None,
-                                },
-                            )
-                            .expect("Failed to insert intent");
-                        run_state = RunState::PlayerTurn;
+                        if let Some(ranged_item) = maybe_ranged_item {
+                            run_state = RunState::ShowTargeting {
+                                range: ranged_item.range,
+                                item: selected_item,
+                            }
+                        } else {
+                            let mut intent = self.ecs.write_storage::<DesiresUseItem>();
+                            let entity = self.ecs.fetch::<Entity>();
+
+                            intent
+                                .insert(
+                                    *entity,
+                                    DesiresUseItem {
+                                        item: selected_item,
+                                        target: None,
+                                    },
+                                )
+                                .expect("Failed to insert intent");
+                            run_state = RunState::PlayerTurn;
+                        }
                     }
                 }
             }
@@ -126,6 +138,31 @@ impl rltk::GameState for State {
                         intent
                             .insert(*player, DesiresDropItem { item })
                             .expect("failed to insert drop intent");
+
+                        run_state = RunState::PlayerTurn;
+                    }
+                }
+            }
+
+            RunState::ShowTargeting { range, item } => {
+                let target = gui::ranged_target(self, ctx, range);
+
+                match target.0 {
+                    gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
+                    gui::ItemMenuResult::Selected => {
+                        let mut intent = self.ecs.write_storage::<DesiresUseItem>();
+                        let player = self.ecs.fetch::<Entity>();
+
+                        intent
+                            .insert(
+                                *player,
+                                DesiresUseItem {
+                                    item,
+                                    target: target.1,
+                                },
+                            )
+                            .expect("unable to insert intent");
 
                         run_state = RunState::PlayerTurn;
                     }

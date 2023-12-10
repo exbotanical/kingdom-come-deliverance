@@ -2,10 +2,11 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        CombatStats, Consumable, DesiresAcquireItem, DesiresDropItem, DesiresUseItem, InInventory,
-        Name, Position, ProvidesHealing,
+        AreaOfEffect, CombatStats, Consumable, Damage, DesiresAcquireItem, DesiresDropItem,
+        DesiresUseItem, InInventory, InflictsDamage, Name, Position, ProvidesHealing, StatusEffect,
     },
     log::GameLog,
+    map::Map,
 };
 
 pub struct ItemAcquisitionSystem {}
@@ -52,33 +53,72 @@ impl<'a> System<'a> for ItemUseSystem {
     type SystemData = (
         ReadExpect<'a, Entity>,
         WriteExpect<'a, GameLog>,
+        ReadExpect<'a, Map>,
         Entities<'a>,
         WriteStorage<'a, DesiresUseItem>,
         ReadStorage<'a, Name>,
         ReadStorage<'a, Consumable>,
         ReadStorage<'a, ProvidesHealing>,
+        ReadStorage<'a, InflictsDamage>,
         WriteStorage<'a, CombatStats>,
+        WriteStorage<'a, Damage>,
+        ReadStorage<'a, AreaOfEffect>,
+        WriteStorage<'a, StatusEffect>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (
             player,
             mut log,
+            map,
             entities,
             mut desires_use,
             names,
             consumables,
             heals,
+            damages,
             mut combat_stats,
+            mut damage,
+            aoe,
+            mut status_effects,
         ) = data;
 
-        for (entity, desires_use) in (&entities, &desires_use).join() {
+        for (acting_entity, desires_use) in (&entities, &desires_use).join() {
             let mut used_item = false;
             let mut targets: Vec<Entity> = Vec::new();
 
             match desires_use.target {
-                None => targets.push(*player),
-                Some(t) => {}
+                None => {
+                    targets.push(*player);
+                }
+
+                Some(target) => {
+                    let area = aoe.get(desires_use.item);
+                    let idx = map.xy_idx(target.x, target.y);
+
+                    match area {
+                        None => {
+                            for t in map.tile_content[idx].iter() {
+                                targets.push(*t);
+                            }
+                        }
+
+                        Some(area) => {
+                            let mut blast_cells = rltk::field_of_view(target, area.radius, &*map);
+                            blast_cells.retain(|p| {
+                                p.x > 0 && p.x < map.width - 1 && p.y > 0 && p.y < map.height - 1
+                            });
+
+                            for cell_idx in blast_cells.iter() {
+                                let idx = map.xy_idx(cell_idx.x, cell_idx.y);
+
+                                for t in map.tile_content[idx].iter() {
+                                    targets.push(*t);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             let item_heals = heals.get(desires_use.item);
@@ -93,7 +133,7 @@ impl<'a> System<'a> for ItemUseSystem {
                         if let Some(stats) = stats {
                             stats.hp = i32::min(stats.max_hp, stats.hp + healer.heal_amount);
 
-                            if entity == *player {
+                            if acting_entity == *player {
                                 log.entries.push(format!(
                                     "You consume the {}, healing {} hp",
                                     &names.get(desires_use.item).unwrap().name,
@@ -104,6 +144,64 @@ impl<'a> System<'a> for ItemUseSystem {
                         }
                     }
                 }
+            }
+
+            let item_damages = damages.get(desires_use.item);
+            match item_damages {
+                None => {}
+                Some(damager) => {
+                    used_item = false;
+
+                    for target in targets.iter() {
+                        Damage::new_damage(&mut damage, *target, damager.damage);
+
+                        if acting_entity == *player {
+                            let target_name = names.get(*target).unwrap();
+                            let item_name = names.get(desires_use.item).unwrap();
+
+                            log.entries.push(format!(
+                                "You use {} on {}, inflicting {} hp",
+                                item_name.name, target_name.name, damager.damage
+                            ))
+                        }
+
+                        used_item = true;
+                    }
+                }
+            }
+
+            let mut apply_effect = Vec::new();
+            {
+                let effect = status_effects.get(desires_use.item);
+
+                match effect {
+                    None => {}
+                    Some(effect) => {
+                        used_item = false;
+
+                        for target in targets.iter() {
+                            apply_effect.push((*target, effect.clone()));
+
+                            if acting_entity == *player {
+                                let target_name = names.get(*target).unwrap();
+                                let item_name = names.get(desires_use.item).unwrap();
+
+                                log.entries.push(format!(
+                                    "You use {} on {}, {} them.",
+                                    item_name.name, target_name.name, effect.print_as
+                                ));
+                            }
+
+                            used_item = true;
+                        }
+                    }
+                }
+            }
+
+            for affected in apply_effect.iter() {
+                status_effects
+                    .insert(affected.0, affected.1.clone())
+                    .expect("failed to insert effect");
             }
 
             if used_item {

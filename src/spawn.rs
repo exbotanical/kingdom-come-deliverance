@@ -3,8 +3,9 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        BlocksTile, CombatStats, Consumable, Item, Monster, Name, Player, Position,
-        ProvidesHealing, Renderable, Viewshed,
+        AreaOfEffect, BlocksTile, CombatStats, Consumable, InflictsDamage, Item, Monster, Name,
+        Player, Position, ProvidesHealing, Ranged, Renderable, StatusEffect, StatusEffectType,
+        Viewshed,
     },
     geometry::Rect,
     map::MAP_WIDTH,
@@ -13,12 +14,12 @@ use crate::{
 const MAX_MONSTERS: i32 = 4;
 const MAX_ITEMS: i32 = 2;
 
-pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
+pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
+    //TODO: rm
+    confusion_scroll(ecs, x, y);
+
     ecs.create_entity()
-        .with(Position {
-            x: player_x,
-            y: player_y,
-        })
+        .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('@'),
             fg: rltk::RGB::named(rltk::YELLOW),
@@ -140,10 +141,25 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
     }
 
     spawn_in_room(ecs, monster_spawn_points, random_monster);
-    spawn_in_room(ecs, item_spawn_points, health_potion);
+    spawn_in_room(ecs, item_spawn_points, random_item);
 }
 
-pub fn health_potion(ecs: &mut World, x: i32, y: i32) {
+fn random_item(ecs: &mut World, x: i32, y: i32) {
+    let roll: i32;
+    {
+        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+        roll = rng.roll_dice(1, 2);
+    }
+
+    match roll {
+        1 => health_potion(ecs, x, y),
+        2 => fireball_scroll(ecs, x, y),
+        3 => confusion_scroll(ecs, x, y),
+        _ => projectile(ecs, x, y),
+    }
+}
+
+fn health_potion(ecs: &mut World, x: i32, y: i32) {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
@@ -158,5 +174,67 @@ pub fn health_potion(ecs: &mut World, x: i32, y: i32) {
         .with(Item {})
         .with(Consumable {})
         .with(ProvidesHealing { heal_amount: 8 })
+        .build();
+}
+
+fn projectile(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437(')'),
+            fg: rltk::RGB::named(rltk::CYAN),
+            bg: rltk::RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Magick Missile Scroll".to_string(),
+        })
+        .with(Item {})
+        .with(Consumable {})
+        .with(Ranged { range: 6 })
+        .with(InflictsDamage { damage: 8 })
+        .build();
+}
+
+fn fireball_scroll(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437(')'),
+            fg: rltk::RGB::named(rltk::ORANGE),
+            bg: rltk::RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Fireball Scroll".to_string(),
+        })
+        .with(Item {})
+        .with(Consumable {})
+        .with(Ranged { range: 6 })
+        .with(InflictsDamage { damage: 20 })
+        .with(AreaOfEffect { radius: 3 })
+        .build();
+}
+
+fn confusion_scroll(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437(')'),
+            fg: rltk::RGB::named(rltk::PINK),
+            bg: rltk::RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name {
+            name: "Confusion Scroll".to_string(),
+        })
+        .with(Item {})
+        .with(Consumable {})
+        .with(Ranged { range: 6 })
+        .with(StatusEffect {
+            effect: StatusEffectType::Confusion,
+            turns: 4,
+            print_as: "confusing".to_string(),
+        })
         .build();
 }

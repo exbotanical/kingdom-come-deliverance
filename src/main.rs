@@ -2,9 +2,9 @@ use rltk::{self, Point};
 use specs::prelude::*;
 use whatever::{
     components::{
-        BlocksTile, CombatStats, Consumable, Damage, DesiresAcquireItem, DesiresDropItem,
-        DesiresMelee, DesiresUseItem, InInventory, Item, Monster, Name, Player, Position,
-        ProvidesHealing, Renderable, Viewshed,
+        AreaOfEffect, BlocksTile, CombatStats, Consumable, Damage, DesiresAcquireItem,
+        DesiresDropItem, DesiresMelee, DesiresUseItem, InInventory, InflictsDamage, Item, Monster,
+        Name, Player, Position, ProvidesHealing, Ranged, Renderable, StatusEffect, Viewshed,
     },
     log,
     map::Map,
@@ -39,6 +39,10 @@ fn main() -> rltk::BError {
     gs.ecs.register::<DesiresAcquireItem>();
     gs.ecs.register::<DesiresUseItem>();
     gs.ecs.register::<DesiresDropItem>();
+    gs.ecs.register::<InflictsDamage>();
+    gs.ecs.register::<Ranged>();
+    gs.ecs.register::<AreaOfEffect>();
+    gs.ecs.register::<StatusEffect>();
 
     let map = Map::generate_map_rooms_and_tunnels();
 
