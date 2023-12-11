@@ -25,9 +25,9 @@ pub fn reap(ecs: &mut World) {
     let mut dead: Vec<Entity> = Vec::new();
 
     {
-        let combat_stats = ecs.read_storage::<CombatStats>();
-        let players = ecs.read_storage::<Player>();
         let entities = ecs.entities();
+        let players = ecs.read_storage::<Player>();
+        let combat_stats = ecs.read_storage::<CombatStats>();
         let names = ecs.read_storage::<Name>();
 
         let mut log = ecs.write_resource::<log::GameLog>();
@@ -37,8 +37,8 @@ pub fn reap(ecs: &mut World) {
                 let player = players.get(entity);
                 match player {
                     None => {
-                        let victim_name = names.get(entity);
-                        if let Some(n) = victim_name {
+                        let target_name = names.get(entity);
+                        if let Some(n) = target_name {
                             log.entries.push(format!("{} has died", &n.name))
                         }
                         dead.push(entity)
@@ -49,7 +49,7 @@ pub fn reap(ecs: &mut World) {
         }
     }
 
-    for victim in dead {
-        ecs.delete_entity(victim).expect("unable to delete in reap");
+    for target in dead {
+        ecs.delete_entity(target).expect("unable to delete in reap");
     }
 }

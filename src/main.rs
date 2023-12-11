@@ -2,7 +2,7 @@ use rltk::{self, Point};
 use specs::prelude::*;
 use whatever::{
     components::{
-        AreaOfEffect, BlocksTile, CombatStats, Consumable, Damage, DesiresAcquireItem,
+        AreaOfEffect, BlocksCell, CombatStats, Consumable, Damage, DesiresAcquireItem,
         DesiresDropItem, DesiresMelee, DesiresUseItem, InInventory, InflictsDamage, Item, Monster,
         Name, Player, Position, ProvidesHealing, Ranged, Renderable, StatusEffect, Viewshed,
     },
@@ -28,7 +28,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
-    gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<BlocksCell>();
     gs.ecs.register::<CombatStats>();
     gs.ecs.register::<DesiresMelee>();
     gs.ecs.register::<Damage>();
@@ -46,19 +46,20 @@ fn main() -> rltk::BError {
 
     let map = Map::generate_map_rooms_and_tunnels();
 
-    let (player_x, player_y) = map.rooms[0].center();
+    let (x, y) = map.rooms[0].center();
 
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
 
+    // Skip room player spawned in
     for room in map.rooms.iter().skip(1) {
-        spawn::spawn_room(&mut gs.ecs, room);
+        spawn::room(&mut gs.ecs, room);
     }
 
-    let player_entity = spawn::player(&mut gs.ecs, player_x, player_y);
+    let player_entity = spawn::player(&mut gs.ecs, x, y);
 
     gs.ecs.insert(player_entity);
     gs.ecs.insert(map);
-    gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(Point::new(x, y));
     gs.ecs.insert(RunState::PreRun);
     gs.ecs.insert(log::GameLog {
         entries: vec!["lil boo mane - lil booney".to_string()],

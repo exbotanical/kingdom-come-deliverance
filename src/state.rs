@@ -7,7 +7,6 @@ use crate::components::DesiresUseItem;
 use crate::components::Position;
 use crate::components::Ranged;
 use crate::components::Renderable;
-use crate::gui;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
@@ -20,6 +19,7 @@ use crate::systems::MapIndexingSystem;
 use crate::systems::MeleeCombatSystem;
 use crate::systems::MonsterAISystem;
 use crate::systems::VisibilitySystem;
+use crate::ui;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum RunState {
@@ -34,7 +34,7 @@ pub enum RunState {
         item: Entity,
     },
     MainMenu {
-        menu_selection: gui::MainMenuSelection,
+        menu_selection: ui::MainMenuSelection,
     },
 }
 
@@ -44,29 +44,29 @@ pub struct State {
 
 impl State {
     fn run_systems(&mut self) {
-        let mut vis = VisibilitySystem {};
-        vis.run_now(&self.ecs);
+        let mut vis_system = VisibilitySystem {};
+        vis_system.run_now(&self.ecs);
 
-        let mut mob = MonsterAISystem {};
-        mob.run_now(&self.ecs);
+        let mut monster_ai_system = MonsterAISystem {};
+        monster_ai_system.run_now(&self.ecs);
 
-        let mut map_idx = MapIndexingSystem {};
-        map_idx.run_now(&self.ecs);
+        let mut map_idx_system = MapIndexingSystem {};
+        map_idx_system.run_now(&self.ecs);
 
-        let mut melee = MeleeCombatSystem {};
-        melee.run_now(&self.ecs);
+        let mut melee_system = MeleeCombatSystem {};
+        melee_system.run_now(&self.ecs);
 
-        let mut damage = DamageSystem {};
-        damage.run_now(&self.ecs);
+        let mut damage_system = DamageSystem {};
+        damage_system.run_now(&self.ecs);
 
-        let mut acquisitions = ItemAcquisitionSystem {};
-        acquisitions.run_now(&self.ecs);
+        let mut item_acquisition_system = ItemAcquisitionSystem {};
+        item_acquisition_system.run_now(&self.ecs);
 
-        let mut items = ItemUseSystem {};
-        items.run_now(&self.ecs);
+        let mut item_use_system = ItemUseSystem {};
+        item_use_system.run_now(&self.ecs);
 
-        let mut drops = ItemDropSystem {};
-        drops.run_now(&self.ecs);
+        let mut item_drop_system = ItemDropSystem {};
+        item_drop_system.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -80,52 +80,61 @@ impl rltk::GameState for State {
 
         match run_state {
             RunState::MainMenu { .. } => {}
+
             _ => {
                 draw_map(&self.ecs, ctx);
 
+                let map = self.ecs.fetch::<Map>();
                 let positions = self.ecs.read_storage::<Position>();
                 let renderables = self.ecs.read_storage::<Renderable>();
-                let map = self.ecs.fetch::<Map>();
 
                 let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
                 data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
 
                 for (pos, render) in data.iter() {
                     let idx = map.xy_idx(pos.x, pos.y);
-                    if map.visible_tiles[idx] {
+                    if map.visible_cells[idx] {
                         ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
                     }
                 }
 
-                gui::draw_ui(&self.ecs, ctx);
+                ui::draw_ui(&self.ecs, ctx);
             }
         }
 
         match run_state {
             RunState::PreRun => {
                 self.run_systems();
-                self.ecs.maintain(); // cleanup delete items during systems run
+                // cleanup delete items during systems run
+                self.ecs.maintain();
+
                 run_state = RunState::AwaitingInput;
             }
+
             RunState::AwaitingInput => {
                 run_state = player_input(self, ctx);
             }
+
             RunState::PlayerTurn => {
                 self.run_systems();
                 self.ecs.maintain();
+
                 run_state = RunState::MonsterTurn;
             }
+
             RunState::MonsterTurn => {
                 self.run_systems();
                 self.ecs.maintain();
+
                 run_state = RunState::AwaitingInput;
             }
+
             RunState::ShowInventory => {
-                let result = gui::show_inventory(self, ctx);
+                let result = ui::show_inventory(self, ctx);
                 match result.0 {
-                    gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::NoResponse => {}
-                    gui::ItemMenuResult::Selected => {
+                    ui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
+                    ui::ItemMenuResult::NoResponse => {}
+                    ui::ItemMenuResult::Selected => {
                         let selected_item = result.1.unwrap();
                         let ranged = self.ecs.read_storage::<Ranged>();
                         let maybe_ranged_item = ranged.get(selected_item);
@@ -136,8 +145,8 @@ impl rltk::GameState for State {
                                 item: selected_item,
                             }
                         } else {
-                            let mut intent = self.ecs.write_storage::<DesiresUseItem>();
                             let entity = self.ecs.fetch::<Entity>();
+                            let mut intent = self.ecs.write_storage::<DesiresUseItem>();
 
                             intent
                                 .insert(
@@ -148,6 +157,7 @@ impl rltk::GameState for State {
                                     },
                                 )
                                 .expect("Failed to insert intent");
+
                             run_state = RunState::PlayerTurn;
                         }
                     }
@@ -155,11 +165,11 @@ impl rltk::GameState for State {
             }
 
             RunState::ShowDropItem => {
-                let result = gui::drop_item_menu(self, ctx);
+                let result = ui::drop_item_menu(self, ctx);
                 match result.0 {
-                    gui::ItemMenuResult::NoResponse => {}
-                    gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::Selected => {
+                    ui::ItemMenuResult::NoResponse => {}
+                    ui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
+                    ui::ItemMenuResult::Selected => {
                         let item = result.1.unwrap();
                         let player = self.ecs.fetch::<Entity>();
                         let mut intent = self.ecs.write_storage::<DesiresDropItem>();
@@ -174,14 +184,14 @@ impl rltk::GameState for State {
             }
 
             RunState::ShowTargeting { range, item } => {
-                let target = gui::ranged_target(self, ctx, range);
+                let target = ui::ranged_target(self, ctx, range);
 
                 match target.0 {
-                    gui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
-                    gui::ItemMenuResult::NoResponse => {}
-                    gui::ItemMenuResult::Selected => {
-                        let mut intent = self.ecs.write_storage::<DesiresUseItem>();
+                    ui::ItemMenuResult::Cancel => run_state = RunState::AwaitingInput,
+                    ui::ItemMenuResult::NoResponse => {}
+                    ui::ItemMenuResult::Selected => {
                         let player = self.ecs.fetch::<Entity>();
+                        let mut intent = self.ecs.write_storage::<DesiresUseItem>();
 
                         intent
                             .insert(
@@ -199,18 +209,19 @@ impl rltk::GameState for State {
             }
 
             RunState::MainMenu { .. } => {
-                let result = gui::main_menu(self, ctx);
+                let result = ui::main_menu(self, ctx);
 
                 match result {
-                    gui::MainMenuResult::NoSelection { selected } => {
+                    ui::MainMenuResult::NoSelection { selected } => {
                         run_state = RunState::MainMenu {
                             menu_selection: selected,
                         }
                     }
-                    gui::MainMenuResult::Selected { selected } => match selected {
-                        gui::MainMenuSelection::NewGame => run_state = RunState::PreRun,
-                        gui::MainMenuSelection::LoadGame => run_state = RunState::PreRun,
-                        gui::MainMenuSelection::Quit => {
+
+                    ui::MainMenuResult::Selected { selected } => match selected {
+                        ui::MainMenuSelection::NewGame => run_state = RunState::PreRun,
+                        ui::MainMenuSelection::LoadGame => run_state = RunState::PreRun,
+                        ui::MainMenuSelection::Quit => {
                             ::std::process::exit(0);
                         }
                     },

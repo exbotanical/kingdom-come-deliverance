@@ -10,22 +10,29 @@ pub const MAP_WIDTH: i32 = 80;
 pub const MAP_HEIGHT: i32 = 43;
 pub const MAP_COUNT: usize = (MAP_HEIGHT * MAP_WIDTH) as usize;
 
+// The max number of rooms to generate
+const MAX_ROOMS: i32 = 30;
+
+// Rand ranges
+const MIN_SIZE: i32 = 6;
+const MAX_SIZE: i32 = 10;
+
 #[derive(PartialEq, Clone, Copy, Debug)]
-pub enum TileType {
+pub enum CellType {
     Wall,
     Floor,
 }
 
 pub struct Map {
-    pub tiles: Vec<TileType>,
-    pub revealed_tiles: Vec<bool>,
-    pub visible_tiles: Vec<bool>,
+    pub cells: Vec<CellType>,
+    pub revealed_cells: Vec<bool>,
+    pub visible_cells: Vec<bool>,
     pub rooms: Vec<Rect>,
     pub width: i32,
     pub height: i32,
     // Is the point blocked by something?
     pub blocked: Vec<bool>,
-    pub tile_content: Vec<Vec<Entity>>,
+    pub cell_content: Vec<Vec<Entity>>,
 }
 
 impl Map {
@@ -33,9 +40,9 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
-    /// Visits each vector in tile_content and clears it
+    /// Visits each vector in cell_content and clears it
     pub fn clear_content_idx(&mut self) {
-        for content in self.tile_content.iter_mut() {
+        for content in self.cell_content.iter_mut() {
             content.clear();
         }
     }
@@ -52,10 +59,10 @@ impl Map {
         !self.blocked[idx]
     }
 
-    /// Sets blocked on a tile if its a wall
+    /// Sets blocked on a cell if its a wall
     pub fn populate_blocked(&mut self) {
-        for (i, tile) in self.tiles.iter_mut().enumerate() {
-            self.blocked[i] = *tile == TileType::Wall;
+        for (i, cell) in self.cells.iter_mut().enumerate() {
+            self.blocked[i] = *cell == CellType::Wall;
         }
     }
 
@@ -63,7 +70,7 @@ impl Map {
         for y in room.y1 + 1..=room.y2 {
             for x in room.x1 + 1..=room.x2 {
                 let idx = self.xy_idx(x, y);
-                self.tiles[idx] = TileType::Floor;
+                self.cells[idx] = CellType::Floor;
             }
         }
     }
@@ -72,7 +79,7 @@ impl Map {
         for x in min(x1, x2)..=max(x1, x2) {
             let idx = self.xy_idx(x, y);
             if idx > 0 && idx < self.width as usize * self.height as usize {
-                self.tiles[idx] = TileType::Floor;
+                self.cells[idx] = CellType::Floor;
             }
         }
     }
@@ -81,7 +88,7 @@ impl Map {
         for y in min(y1, y2)..=max(y1, y2) {
             let idx = self.xy_idx(x, y);
             if idx > 0 && idx < self.width as usize * self.height as usize {
-                self.tiles[idx] = TileType::Floor;
+                self.cells[idx] = CellType::Floor;
             }
         }
     }
@@ -89,22 +96,15 @@ impl Map {
     /// Generates a map of rooms and connecting tunnels
     pub fn generate_map_rooms_and_tunnels() -> Map {
         let mut map = Map {
-            tiles: vec![TileType::Wall; MAP_COUNT],
-            revealed_tiles: vec![false; MAP_COUNT],
-            visible_tiles: vec![false; MAP_COUNT],
+            cells: vec![CellType::Wall; MAP_COUNT],
+            revealed_cells: vec![false; MAP_COUNT],
+            visible_cells: vec![false; MAP_COUNT],
             blocked: vec![false; MAP_COUNT],
             rooms: Vec::new(),
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
-            tile_content: vec![Vec::new(); MAP_COUNT],
+            cell_content: vec![Vec::new(); MAP_COUNT],
         };
-
-        // The max number of rooms to generate
-        const MAX_ROOMS: i32 = 30;
-
-        // Rand ranges
-        const MIN_SIZE: i32 = 6;
-        const MAX_SIZE: i32 = 10;
 
         let mut rng = RandomNumberGenerator::new();
 
@@ -158,7 +158,7 @@ impl Algorithm2D for Map {
 
 impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
-        self.tiles[idx] == TileType::Wall
+        self.cells[idx] == CellType::Wall
     }
 
     fn get_available_exits(&self, idx: usize) -> rltk::prelude::SmallVec<[(usize, f32); 10]> {
@@ -171,12 +171,15 @@ impl BaseMap for Map {
         if self.is_exit_valid(x - 1, y) {
             exits.push((idx - 1, 1.0))
         };
+
         if self.is_exit_valid(x + 1, y) {
             exits.push((idx + 1, 1.0))
         };
+
         if self.is_exit_valid(x, y - 1) {
             exits.push((idx - w, 1.0))
         };
+
         if self.is_exit_valid(x, y + 1) {
             exits.push((idx + w, 1.0))
         };
@@ -185,12 +188,15 @@ impl BaseMap for Map {
         if self.is_exit_valid(x - 1, y - 1) {
             exits.push(((idx - w) - 1, 1.45));
         }
+
         if self.is_exit_valid(x + 1, y - 1) {
             exits.push(((idx - w) + 1, 1.45));
         }
+
         if self.is_exit_valid(x - 1, y + 1) {
             exits.push(((idx + w) - 1, 1.45));
         }
+
         if self.is_exit_valid(x + 1, y + 1) {
             exits.push(((idx + w) + 1, 1.45));
         }
@@ -208,22 +214,22 @@ impl BaseMap for Map {
 }
 
 pub fn draw_map(ecs: &World, ctx: &mut rltk::Rltk) {
+    let map = ecs.fetch::<Map>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
     let mut players = ecs.write_storage::<Player>();
-    let map = ecs.fetch::<Map>();
 
     for (_player, _viewshed) in (&mut players, &mut viewsheds).join() {
         let mut x = 0;
         let mut y = 0;
 
-        for (idx, tile) in map.tiles.iter().enumerate() {
-            if map.revealed_tiles[idx] {
-                let (glyph, mut fg) = match tile {
-                    TileType::Floor => (rltk::to_cp437('.'), rltk::RGB::from_f32(0.0, 0.5, 0.5)),
-                    TileType::Wall => (rltk::to_cp437('#'), rltk::RGB::from_f32(0., 1.0, 0.)),
+        for (idx, cell) in map.cells.iter().enumerate() {
+            if map.revealed_cells[idx] {
+                let (glyph, mut fg) = match cell {
+                    CellType::Floor => (rltk::to_cp437('.'), rltk::RGB::from_f32(0.0, 0.5, 0.5)),
+                    CellType::Wall => (rltk::to_cp437('#'), rltk::RGB::from_f32(0., 1.0, 0.)),
                 };
 
-                if !map.visible_tiles[idx] {
+                if !map.visible_cells[idx] {
                     fg = fg.to_greyscale()
                 }
 

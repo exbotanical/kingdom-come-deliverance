@@ -25,7 +25,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     {
         let dest_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
 
-        for maybe_target in map.tile_content[dest_idx].iter() {
+        for maybe_target in map.cell_content[dest_idx].iter() {
             let target = combat_stats.get(*maybe_target);
 
             if let Some(_target) = target {
@@ -44,6 +44,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         if !map.blocked[dest_idx] {
             pos.x = min(MAP_WIDTH - 1, max(0, pos.x + delta_x));
             pos.y = min(MAP_HEIGHT - 1, max(0, pos.y + delta_y));
+
             viewshed.dirty = true;
 
             let mut player_pos = ecs.write_resource::<Point>();
@@ -103,8 +104,8 @@ pub fn player_input(gs: &mut State, ctx: &mut rltk::Rltk) -> RunState {
 }
 
 fn acquire_item(ecs: &mut World) {
+    let player = ecs.fetch::<Entity>();
     let player_pos = ecs.fetch::<Point>();
-    let player_entity = ecs.fetch::<Entity>();
     let entities = ecs.entities();
     let items = ecs.read_storage::<Item>();
     let positions = ecs.read_storage::<Position>();
@@ -126,9 +127,9 @@ fn acquire_item(ecs: &mut World) {
             let mut acquisition = ecs.write_storage::<DesiresAcquireItem>();
             acquisition
                 .insert(
-                    *player_entity,
+                    *player,
                     DesiresAcquireItem {
-                        acquired_by: *player_entity,
+                        acquired_by: *player,
                         item,
                     },
                 )

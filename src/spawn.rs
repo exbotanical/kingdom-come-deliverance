@@ -3,7 +3,7 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        AreaOfEffect, BlocksTile, CombatStats, Consumable, InflictsDamage, Item, Monster, Name,
+        AreaOfEffect, BlocksCell, CombatStats, Consumable, InflictsDamage, Item, Monster, Name,
         Player, Position, ProvidesHealing, Ranged, Renderable, StatusEffect, StatusEffectType,
         Viewshed,
     },
@@ -15,9 +15,6 @@ const MAX_MONSTERS: i32 = 4;
 const MAX_ITEMS: i32 = 2;
 
 pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
-    //TODO: rm
-    confusion_scroll(ecs, x, y);
-
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
@@ -37,61 +34,30 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
             power: 5,
         })
         .with(Viewshed {
-            visible_tiles: Vec::new(),
+            visible_cells: Vec::new(),
             range: 8,
             dirty: true,
         })
         .build()
 }
 
-pub fn random_monster(ecs: &mut World, x: i32, y: i32) {
-    let roll;
+pub fn room(ecs: &mut World, room: &Rect) {
+    let monster_spawn_points: Vec<usize>;
+    let item_spawn_points: Vec<usize>;
+
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
 
-        roll = rng.roll_dice(1, 2);
+        let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
+        monster_spawn_points = generate_spawn_points(&mut rng, room, num_monsters);
+
+        let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
+
+        item_spawn_points = generate_spawn_points(&mut rng, room, num_items);
     }
 
-    match roll {
-        1 => goblin(ecs, x, y),
-        _ => orc(ecs, x, y),
-    };
-}
-
-fn orc(ecs: &mut World, x: i32, y: i32) {
-    monster(ecs, x, y, rltk::to_cp437('o'), "Orc");
-}
-
-fn goblin(ecs: &mut World, x: i32, y: i32) {
-    monster(ecs, x, y, rltk::to_cp437('g'), "Goblin");
-}
-
-fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: S) {
-    ecs.create_entity()
-        .with(Position { x, y })
-        .with(Renderable {
-            glyph,
-            fg: rltk::RGB::named(rltk::RED),
-            bg: rltk::RGB::named(rltk::BLACK),
-            render_order: 1,
-        })
-        .with(Viewshed {
-            visible_tiles: Vec::new(),
-            range: 8,
-            dirty: true,
-        })
-        .with(Monster {})
-        .with(Name {
-            name: name.to_string(),
-        })
-        .with(CombatStats {
-            max_hp: 16,
-            hp: 16,
-            defense: 1,
-            power: 4,
-        })
-        .with(BlocksTile {})
-        .build();
+    spawn_in_room(ecs, monster_spawn_points, spawn_random_monster);
+    spawn_in_room(ecs, item_spawn_points, spawn_random_item);
 }
 
 fn generate_spawn_points(rng: &mut RandomNumberGenerator, room: &Rect, num: i32) -> Vec<usize> {
@@ -125,26 +91,57 @@ where
     }
 }
 
-pub fn spawn_room(ecs: &mut World, room: &Rect) {
-    let monster_spawn_points: Vec<usize>;
-    let item_spawn_points: Vec<usize>;
-
+fn spawn_random_monster(ecs: &mut World, x: i32, y: i32) {
+    let roll;
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
 
-        let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-        monster_spawn_points = generate_spawn_points(&mut rng, room, num_monsters);
-
-        let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
-
-        item_spawn_points = generate_spawn_points(&mut rng, room, num_items);
+        roll = rng.roll_dice(1, 2);
     }
 
-    spawn_in_room(ecs, monster_spawn_points, random_monster);
-    spawn_in_room(ecs, item_spawn_points, random_item);
+    match roll {
+        1 => spawn_goblin(ecs, x, y),
+        _ => spawn_orc(ecs, x, y),
+    };
 }
 
-fn random_item(ecs: &mut World, x: i32, y: i32) {
+fn spawn_orc(ecs: &mut World, x: i32, y: i32) {
+    spawn_monster(ecs, x, y, rltk::to_cp437('o'), "Orc");
+}
+
+fn spawn_goblin(ecs: &mut World, x: i32, y: i32) {
+    spawn_monster(ecs, x, y, rltk::to_cp437('g'), "Goblin");
+}
+
+fn spawn_monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: S) {
+    ecs.create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph,
+            fg: rltk::RGB::named(rltk::RED),
+            bg: rltk::RGB::named(rltk::BLACK),
+            render_order: 1,
+        })
+        .with(Viewshed {
+            visible_cells: Vec::new(),
+            range: 8,
+            dirty: true,
+        })
+        .with(Monster {})
+        .with(Name {
+            name: name.to_string(),
+        })
+        .with(CombatStats {
+            max_hp: 16,
+            hp: 16,
+            defense: 1,
+            power: 4,
+        })
+        .with(BlocksCell {})
+        .build();
+}
+
+fn spawn_random_item(ecs: &mut World, x: i32, y: i32) {
     let roll: i32;
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
@@ -152,14 +149,14 @@ fn random_item(ecs: &mut World, x: i32, y: i32) {
     }
 
     match roll {
-        1 => health_potion(ecs, x, y),
-        2 => fireball_scroll(ecs, x, y),
-        3 => confusion_scroll(ecs, x, y),
-        _ => projectile(ecs, x, y),
+        1 => spawn_health_potion(ecs, x, y),
+        2 => spawn_fireball_scroll(ecs, x, y),
+        3 => spawn_confusion_scroll(ecs, x, y),
+        _ => spawn_missile_scroll(ecs, x, y),
     }
 }
 
-fn health_potion(ecs: &mut World, x: i32, y: i32) {
+fn spawn_health_potion(ecs: &mut World, x: i32, y: i32) {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
@@ -177,7 +174,7 @@ fn health_potion(ecs: &mut World, x: i32, y: i32) {
         .build();
 }
 
-fn projectile(ecs: &mut World, x: i32, y: i32) {
+fn spawn_missile_scroll(ecs: &mut World, x: i32, y: i32) {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
@@ -196,7 +193,7 @@ fn projectile(ecs: &mut World, x: i32, y: i32) {
         .build();
 }
 
-fn fireball_scroll(ecs: &mut World, x: i32, y: i32) {
+fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
@@ -216,7 +213,7 @@ fn fireball_scroll(ecs: &mut World, x: i32, y: i32) {
         .build();
 }
 
-fn confusion_scroll(ecs: &mut World, x: i32, y: i32) {
+fn spawn_confusion_scroll(ecs: &mut World, x: i32, y: i32) {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {

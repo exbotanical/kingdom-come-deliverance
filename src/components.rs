@@ -9,6 +9,13 @@ pub struct Position {
 }
 
 #[derive(Component)]
+pub struct Viewshed {
+    pub visible_cells: Vec<rltk::Point>,
+    pub range: i32,
+    pub dirty: bool,
+}
+
+#[derive(Component)]
 pub struct Renderable {
     pub glyph: rltk::FontCharType,
     pub fg: rltk::RGB,
@@ -17,25 +24,18 @@ pub struct Renderable {
 }
 
 #[derive(Component)]
-pub struct Name {
-    pub name: String,
-}
+pub struct BlocksCell {}
 
 #[derive(Component)]
 pub struct Player {}
 
 #[derive(Component)]
-pub struct Viewshed {
-    pub visible_tiles: Vec<rltk::Point>,
-    pub range: i32,
-    pub dirty: bool,
-}
-
-#[derive(Component)]
 pub struct Monster {}
 
 #[derive(Component)]
-pub struct BlocksTile {}
+pub struct Name {
+    pub name: String,
+}
 
 #[derive(Component, Debug)]
 pub struct CombatStats {
@@ -57,13 +57,15 @@ pub struct Damage {
 
 impl Damage {
     pub fn new_damage(store: &mut WriteStorage<Damage>, victim: Entity, amount: i32) {
-        if let Some(dmg) = store.get_mut(victim) {
-            dmg.amount.push(amount);
+        if let Some(damage) = store.get_mut(victim) {
+            damage.amount.push(amount);
         } else {
-            let dmg = Damage {
+            let damage = Damage {
                 amount: vec![amount],
             };
-            store.insert(victim, dmg).expect("unable to insert damage");
+            store
+                .insert(victim, damage)
+                .expect("unable to insert damage");
         }
     }
 }

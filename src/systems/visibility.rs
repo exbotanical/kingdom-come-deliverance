@@ -10,37 +10,38 @@ pub struct VisibilitySystem {}
 
 impl<'a> System<'a> for VisibilitySystem {
     type SystemData = (
-        WriteExpect<'a, Map>,
         Entities<'a>,
+        ReadStorage<'a, Player>,
+        WriteExpect<'a, Map>,
         WriteStorage<'a, Viewshed>,
         WriteStorage<'a, Position>,
-        ReadStorage<'a, Player>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut map, entities, mut viewshed, pos, player) = data;
+        let (entities, player, mut map, mut viewsheds, positions) = data;
 
-        for (entitites, viewshed, pos) in (&entities, &mut viewshed, &pos).join() {
+        for (entitites, viewshed, pos) in (&entities, &mut viewsheds, &positions).join() {
             if viewshed.dirty {
                 viewshed.dirty = false;
-                viewshed.visible_tiles.clear();
-                viewshed.visible_tiles =
+                viewshed.visible_cells.clear();
+                viewshed.visible_cells =
                     field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
-                // Retain only tiles within the bounds
+                // Retain only cells within the bounds
                 viewshed
-                    .visible_tiles
+                    .visible_cells
                     .retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height);
 
-                let p = player.get(entitites);
-                if let Some(_p) = p {
-                    for t in map.visible_tiles.iter_mut() {
-                        *t = false
+                let maybe_player = player.get(entitites);
+                if let Some(_player) = maybe_player {
+                    for cell in map.visible_cells.iter_mut() {
+                        *cell = false
                     }
 
-                    for vis in viewshed.visible_tiles.iter() {
+                    for vis in viewshed.visible_cells.iter() {
                         let idx = map.xy_idx(vis.x, vis.y);
-                        map.revealed_tiles[idx] = true;
-                        map.visible_tiles[idx] = true;
+
+                        map.revealed_cells[idx] = true;
+                        map.visible_cells[idx] = true;
                     }
                 }
             }
