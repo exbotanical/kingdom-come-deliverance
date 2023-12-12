@@ -1,10 +1,10 @@
+use crate::components::Player;
+use crate::{components::Viewshed, geometry::Rect};
 use rltk::{self, Algorithm2D, BaseMap, Point, RandomNumberGenerator};
+use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 use specs::World;
 use std::cmp::{max, min};
-
-use crate::components::Player;
-use crate::{components::Viewshed, geometry::Rect};
 
 pub const MAP_WIDTH: i32 = 80;
 pub const MAP_HEIGHT: i32 = 43;
@@ -17,12 +17,13 @@ const MAX_ROOMS: i32 = 30;
 const MIN_SIZE: i32 = 6;
 const MAX_SIZE: i32 = 10;
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Serialize, Deserialize, Debug)]
 pub enum CellType {
     Wall,
     Floor,
 }
 
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Map {
     pub cells: Vec<CellType>,
     pub revealed_cells: Vec<bool>,
@@ -32,6 +33,9 @@ pub struct Map {
     pub height: i32,
     // Is the point blocked by something?
     pub blocked: Vec<bool>,
+
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub cell_content: Vec<Vec<Entity>>,
 }
 

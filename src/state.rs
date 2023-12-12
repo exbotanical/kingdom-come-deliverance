@@ -10,6 +10,7 @@ use crate::components::Renderable;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
+use crate::save;
 use crate::systems::damage;
 use crate::systems::inventory::ItemAcquisitionSystem;
 use crate::systems::inventory::ItemDropSystem;
@@ -36,6 +37,7 @@ pub enum RunState {
     MainMenu {
         menu_selection: ui::MainMenuSelection,
     },
+    SaveGame,
 }
 
 pub struct State {
@@ -220,11 +222,24 @@ impl rltk::GameState for State {
 
                     ui::MainMenuResult::Selected { selected } => match selected {
                         ui::MainMenuSelection::NewGame => run_state = RunState::PreRun,
-                        ui::MainMenuSelection::LoadGame => run_state = RunState::PreRun,
+                        ui::MainMenuSelection::LoadGame => {
+                            save::load_game(&mut self.ecs);
+                            run_state = RunState::PreRun;
+                            // TODO: if we want perma-death
+                            // save::delete_save();
+                        }
                         ui::MainMenuSelection::Quit => {
                             ::std::process::exit(0);
                         }
                     },
+                }
+            }
+
+            RunState::SaveGame => {
+                save::save_game(&mut self.ecs);
+
+                run_state = RunState::MainMenu {
+                    menu_selection: ui::MainMenuSelection::LoadGame,
                 }
             }
         }

@@ -1,21 +1,25 @@
-use rltk::Point;
+use serde::{Deserialize, Serialize};
+use specs::error::NoError;
 use specs::prelude::*;
-use specs_derive::Component;
+use specs::saveload::{ConvertSaveload, Marker};
+use specs_derive::*;
 
-#[derive(Component)]
+use crate::map::Map;
+
+#[derive(Component, ConvertSaveload, Clone)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
 }
 
-#[derive(Component)]
+#[derive(Component, ConvertSaveload, Clone)]
 pub struct Viewshed {
     pub visible_cells: Vec<rltk::Point>,
     pub range: i32,
     pub dirty: bool,
 }
 
-#[derive(Component)]
+#[derive(Component, ConvertSaveload, Clone)]
 pub struct Renderable {
     pub glyph: rltk::FontCharType,
     pub fg: rltk::RGB,
@@ -23,21 +27,21 @@ pub struct Renderable {
     pub render_order: i32,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct BlocksCell {}
 
-#[derive(Component)]
+#[derive(Component, Serialize, Deserialize, Clone)]
 pub struct Player {}
 
-#[derive(Component)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct Monster {}
 
-#[derive(Component)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct Name {
     pub name: String,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct CombatStats {
     pub max_hp: i32,
     pub hp: i32,
@@ -45,12 +49,12 @@ pub struct CombatStats {
     pub power: i32,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct DesiresMelee {
     pub target: Entity,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct Damage {
     pub amount: Vec<i32>,
 }
@@ -70,63 +74,70 @@ impl Damage {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct Item {}
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct InInventory {
     pub owner: Entity,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct DesiresAcquireItem {
     pub acquired_by: Entity,
     pub item: Entity,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload)]
 pub struct DesiresUseItem {
     pub item: Entity,
-    pub target: Option<Point>,
+    pub target: Option<rltk::Point>,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct DesiresDropItem {
     pub item: Entity,
 }
 
 /// Indicates an item can be used (at which point it is destroyed)
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct Consumable {}
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct ProvidesHealing {
     pub heal_amount: i32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct Ranged {
     pub range: i32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct InflictsDamage {
     pub damage: i32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct AreaOfEffect {
     pub radius: i32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum StatusEffectType {
     Confusion,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct StatusEffect {
     pub effect: StatusEffectType,
     pub print_as: String,
     pub turns: i32,
+}
+
+pub struct SerializeOnSave;
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct SerializationHelper {
+    pub map: Map,
 }

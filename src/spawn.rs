@@ -1,11 +1,14 @@
 use rltk::RandomNumberGenerator;
-use specs::prelude::*;
+use specs::{
+    prelude::*,
+    saveload::{MarkedBuilder, SimpleMarker},
+};
 
 use crate::{
     components::{
         AreaOfEffect, BlocksCell, CombatStats, Consumable, InflictsDamage, Item, Monster, Name,
-        Player, Position, ProvidesHealing, Ranged, Renderable, StatusEffect, StatusEffectType,
-        Viewshed,
+        Player, Position, ProvidesHealing, Ranged, Renderable, SerializeOnSave, StatusEffect,
+        StatusEffectType, Viewshed,
     },
     geometry::Rect,
     map::MAP_WIDTH,
@@ -38,6 +41,7 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
             range: 8,
             dirty: true,
         })
+        .marked::<SimpleMarker<SerializeOnSave>>()
         .build()
 }
 
@@ -138,6 +142,7 @@ fn spawn_monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::Font
             power: 4,
         })
         .with(BlocksCell {})
+        .marked::<SimpleMarker<SerializeOnSave>>()
         .build();
 }
 
@@ -171,6 +176,7 @@ fn spawn_health_potion(ecs: &mut World, x: i32, y: i32) {
         .with(Item {})
         .with(Consumable {})
         .with(ProvidesHealing { heal_amount: 8 })
+        .marked::<SimpleMarker<SerializeOnSave>>()
         .build();
 }
 
@@ -190,6 +196,7 @@ fn spawn_missile_scroll(ecs: &mut World, x: i32, y: i32) {
         .with(Consumable {})
         .with(Ranged { range: 6 })
         .with(InflictsDamage { damage: 8 })
+        .marked::<SimpleMarker<SerializeOnSave>>()
         .build();
 }
 
@@ -210,6 +217,7 @@ fn spawn_fireball_scroll(ecs: &mut World, x: i32, y: i32) {
         .with(Ranged { range: 6 })
         .with(InflictsDamage { damage: 20 })
         .with(AreaOfEffect { radius: 3 })
+        .marked::<SimpleMarker<SerializeOnSave>>()
         .build();
 }
 
@@ -233,5 +241,6 @@ fn spawn_confusion_scroll(ecs: &mut World, x: i32, y: i32) {
             turns: 4,
             print_as: "confusing".to_string(),
         })
+        .marked::<SimpleMarker<SerializeOnSave>>()
         .build();
 }

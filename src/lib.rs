@@ -2,6 +2,7 @@ pub mod components;
 pub mod log;
 pub mod map;
 pub mod player;
+pub mod save;
 pub mod spawn;
 pub mod state;
 
