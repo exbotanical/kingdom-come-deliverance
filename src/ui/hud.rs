@@ -3,6 +3,7 @@ use specs::prelude::*;
 use crate::{
     components::{CombatStats, Player},
     log,
+    map::Map,
     ui::tooltip::draw_tooltips,
 };
 
@@ -14,6 +15,16 @@ pub fn draw_ui(ecs: &World, ctx: &mut rltk::Rltk) {
         6,
         rltk::RGB::named(rltk::WHITE),
         rltk::RGB::named(rltk::BLACK),
+    );
+
+    let map = ecs.fetch::<Map>();
+    let depth = format!("Depth: {}", map.depth);
+    ctx.print_color(
+        2,
+        43,
+        rltk::RGB::named(rltk::YELLOW),
+        rltk::RGB::named(rltk::BLACK),
+        &depth,
     );
 
     let combat_stats = ecs.read_storage::<CombatStats>();

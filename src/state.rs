@@ -1,16 +1,21 @@
+use rltk::Point;
 use rltk::{self};
 use specs::prelude::*;
 use specs::World;
 
-use crate::components::DesiresDropItem;
 use crate::components::DesiresUseItem;
+use crate::components::InInventory;
+use crate::components::Player;
 use crate::components::Position;
 use crate::components::Ranged;
 use crate::components::Renderable;
+use crate::components::{DesiresDropItem, Viewshed};
+use crate::log::GameLog;
 use crate::map::draw_map;
 use crate::map::Map;
 use crate::player::player_input;
 use crate::save;
+use crate::spawn::{self};
 use crate::systems::damage;
 use crate::systems::inventory::ItemAcquisitionSystem;
 use crate::systems::inventory::ItemDropSystem;
@@ -24,20 +29,31 @@ use crate::ui;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum RunState {
-    AwaitingInput,
+    // Intermediate init state
     PreRun,
+    // Awaiting player input to start next turn
+    AwaitingInput,
+    // Player's turn to do something
     PlayerTurn,
+    // Monster's turn to do something
     MonsterTurn,
+    // Displaying player inventory
     ShowInventory,
+    // Displaying player drop menu
     ShowDropItem,
+    // Ranged item targeting UI
     ShowTargeting {
         range: i32,
         item: Entity,
     },
+    // Game main menu
     MainMenu {
         menu_selection: ui::MainMenuSelection,
     },
+    // Save state selected
     SaveGame,
+    // Player moving across map depths
+    NextLevel,
 }
 
 pub struct State {
@@ -71,6 +87,88 @@ impl State {
         item_drop_system.run_now(&self.ecs);
 
         self.ecs.maintain();
+    }
+
+    fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
+        let entities = self.ecs.entities();
+        let players = self.ecs.read_storage::<Player>();
+        let inventory = self.ecs.read_storage::<InInventory>();
+        let player = self.ecs.fetch::<Entity>();
+
+        let mut to_delete: Vec<Entity> = Vec::new();
+
+        for entity in entities.join() {
+            let mut should_delete = true;
+
+            // Don't delete the player
+            let p = players.get(entity);
+            if let Some(_p) = p {
+                should_delete = false;
+            }
+
+            let item = inventory.get(entity);
+            if let Some(item) = item {
+                if item.owner == *player {
+                    should_delete = false;
+                }
+            }
+
+            if should_delete {
+                to_delete.push(entity);
+            }
+        }
+
+        to_delete
+    }
+
+    fn goto_next_level(&mut self) {
+        // Delete entities that aren't the player or player's inventory
+        let to_delete = self.entities_to_remove_on_level_change();
+        for target in to_delete {
+            self.ecs
+                .delete_entity(target)
+                .expect("unable to delete entity");
+        }
+
+        // Build new map and place player
+        let map;
+        {
+            let mut existing_map = self.ecs.write_resource::<Map>();
+            let current_depth = existing_map.depth;
+
+            *existing_map = Map::generate_map_rooms_and_tunnels(current_depth + 1);
+            map = existing_map.clone();
+        }
+
+        // Spawn enemies
+        for room in map.rooms.iter().skip(1) {
+            spawn::room(&mut self.ecs, room);
+        }
+
+        let (player_x, player_y) = map.rooms[0].center();
+        let mut player_pos = self.ecs.write_resource::<rltk::Point>();
+
+        *player_pos = Point::new(player_x, player_y);
+
+        let mut positions = self.ecs.write_storage::<Position>();
+        let player = self.ecs.fetch::<Entity>();
+
+        let player_pos_comp = positions.get_mut(*player);
+        if let Some(player_pos_comp) = player_pos_comp {
+            player_pos_comp.x = player_x;
+            player_pos_comp.y = player_y;
+        }
+
+        // Mark player's position as dirty
+        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        let vs = viewsheds.get_mut(*player);
+        if let Some(vs) = vs {
+            vs.dirty = true;
+        }
+
+        let mut log = self.ecs.fetch_mut::<GameLog>();
+        log.entries
+            .push("You descend to the next level".to_string());
     }
 }
 
@@ -241,6 +339,11 @@ impl rltk::GameState for State {
                 run_state = RunState::MainMenu {
                     menu_selection: ui::MainMenuSelection::LoadGame,
                 }
+            }
+
+            RunState::NextLevel => {
+                self.goto_next_level();
+                run_state = RunState::PreRun;
             }
         }
 

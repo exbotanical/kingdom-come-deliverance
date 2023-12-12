@@ -50,7 +50,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<SimpleMarker<SerializeOnSave>>();
     gs.ecs.register::<SerializationHelper>();
 
-    let map = Map::generate_map_rooms_and_tunnels();
+    let map = Map::generate_map_rooms_and_tunnels(1);
 
     let (x, y) = map.rooms[0].center();
 

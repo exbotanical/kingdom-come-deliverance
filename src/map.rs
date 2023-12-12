@@ -21,6 +21,7 @@ const MAX_SIZE: i32 = 10;
 pub enum CellType {
     Wall,
     Floor,
+    DownStairs,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
@@ -33,6 +34,8 @@ pub struct Map {
     pub height: i32,
     // Is the point blocked by something?
     pub blocked: Vec<bool>,
+    // The depth of the map i.e. floors
+    pub depth: i32,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -98,7 +101,7 @@ impl Map {
     }
 
     /// Generates a map of rooms and connecting tunnels
-    pub fn generate_map_rooms_and_tunnels() -> Map {
+    pub fn generate_map_rooms_and_tunnels(depth: i32) -> Map {
         let mut map = Map {
             cells: vec![CellType::Wall; MAP_COUNT],
             revealed_cells: vec![false; MAP_COUNT],
@@ -108,6 +111,7 @@ impl Map {
             width: MAP_WIDTH,
             height: MAP_HEIGHT,
             cell_content: vec![Vec::new(); MAP_COUNT],
+            depth,
         };
 
         let mut rng = RandomNumberGenerator::new();
@@ -149,6 +153,10 @@ impl Map {
                 map.rooms.push(new_room);
             }
         }
+
+        let stairs_pos = map.rooms[map.rooms.len() - 1].center();
+        let stairs_idx = map.xy_idx(stairs_pos.0, stairs_pos.1);
+        map.cells[stairs_idx] = CellType::DownStairs;
 
         map
     }
@@ -229,8 +237,9 @@ pub fn draw_map(ecs: &World, ctx: &mut rltk::Rltk) {
         for (idx, cell) in map.cells.iter().enumerate() {
             if map.revealed_cells[idx] {
                 let (glyph, mut fg) = match cell {
-                    CellType::Floor => (rltk::to_cp437('.'), rltk::RGB::from_f32(0.0, 0.5, 0.5)),
-                    CellType::Wall => (rltk::to_cp437('#'), rltk::RGB::from_f32(0., 1.0, 0.)),
+                    CellType::Floor => (rltk::to_cp437('.'), rltk::RGB::from_f32(0., 0.5, 0.5)),
+                    CellType::Wall => (rltk::to_cp437('#'), rltk::RGB::from_f32(0., 1., 0.)),
+                    CellType::DownStairs => (rltk::to_cp437('>'), rltk::RGB::from_f32(0., 1., 1.)),
                 };
 
                 if !map.visible_cells[idx] {

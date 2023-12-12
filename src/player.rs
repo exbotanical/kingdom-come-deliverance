@@ -5,7 +5,7 @@ use std::cmp::{max, min};
 use crate::{
     components::{CombatStats, DesiresAcquireItem, DesiresMelee, Item, Player, Position, Viewshed},
     log::GameLog,
-    map::{Map, MAP_HEIGHT, MAP_WIDTH},
+    map::{CellType, Map, MAP_HEIGHT, MAP_WIDTH},
     state::{RunState, State},
 };
 
@@ -99,6 +99,12 @@ pub fn player_input(gs: &mut State, ctx: &mut rltk::Rltk) -> RunState {
             // Save and Quit
             rltk::VirtualKeyCode::Escape => return RunState::SaveGame,
 
+            rltk::VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            }
+
             _ => return RunState::AwaitingInput,
         },
     }
@@ -138,5 +144,21 @@ fn acquire_item(ecs: &mut World) {
                 )
                 .expect("msg");
         }
+    }
+}
+
+fn try_next_level(ecs: &mut World) -> bool {
+    let map = ecs.fetch::<Map>();
+
+    let player_pos = ecs.fetch::<Point>();
+    let player_idx = map.xy_idx(player_pos.x, player_pos.y);
+
+    if map.cells[player_idx] == CellType::DownStairs {
+        true
+    } else {
+        let mut log = ecs.fetch_mut::<GameLog>();
+        log.entries
+            .push("There is no way down from here.".to_string());
+        false
     }
 }
