@@ -34,7 +34,7 @@ pub struct BlocksCell {}
 pub struct Player {}
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone)]
-pub struct Monster {}
+pub struct Enemy {}
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct Name {

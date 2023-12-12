@@ -21,9 +21,9 @@ use crate::systems::inventory::ItemAcquisitionSystem;
 use crate::systems::inventory::ItemDropSystem;
 use crate::systems::inventory::ItemUseSystem;
 use crate::systems::DamageSystem;
+use crate::systems::EnemyAISystem;
 use crate::systems::MapIndexingSystem;
 use crate::systems::MeleeCombatSystem;
-use crate::systems::MonsterAISystem;
 use crate::systems::VisibilitySystem;
 use crate::ui;
 
@@ -35,8 +35,8 @@ pub enum RunState {
     AwaitingInput,
     // Player's turn to do something
     PlayerTurn,
-    // Monster's turn to do something
-    MonsterTurn,
+    // Enemy's turn to do something
+    EnemyTurn,
     // Displaying player inventory
     ShowInventory,
     // Displaying player drop menu
@@ -65,8 +65,8 @@ impl State {
         let mut vis_system = VisibilitySystem {};
         vis_system.run_now(&self.ecs);
 
-        let mut monster_ai_system = MonsterAISystem {};
-        monster_ai_system.run_now(&self.ecs);
+        let mut enemy_ai_system = EnemyAISystem {};
+        enemy_ai_system.run_now(&self.ecs);
 
         let mut map_idx_system = MapIndexingSystem {};
         map_idx_system.run_now(&self.ecs);
@@ -219,10 +219,10 @@ impl rltk::GameState for State {
                 self.run_systems();
                 self.ecs.maintain();
 
-                run_state = RunState::MonsterTurn;
+                run_state = RunState::EnemyTurn;
             }
 
-            RunState::MonsterTurn => {
+            RunState::EnemyTurn => {
                 self.run_systems();
                 self.ecs.maintain();
 

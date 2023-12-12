@@ -5,7 +5,7 @@ use whatever::components::SerializationHelper;
 use whatever::{
     components::{
         AreaOfEffect, BlocksCell, CombatStats, Consumable, Damage, DesiresAcquireItem,
-        DesiresDropItem, DesiresMelee, DesiresUseItem, InInventory, InflictsDamage, Item, Monster,
+        DesiresDropItem, DesiresMelee, DesiresUseItem, Enemy, InInventory, InflictsDamage, Item,
         Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializeOnSave, StatusEffect,
         Viewshed,
     },
@@ -30,7 +30,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
-    gs.ecs.register::<Monster>();
+    gs.ecs.register::<Enemy>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksCell>();
     gs.ecs.register::<CombatStats>();

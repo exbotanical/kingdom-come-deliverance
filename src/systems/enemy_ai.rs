@@ -2,20 +2,20 @@ use rltk::Point;
 use specs::prelude::*;
 
 use crate::{
-    components::{DesiresMelee, Monster, Position, StatusEffect, StatusEffectType, Viewshed},
+    components::{DesiresMelee, Enemy, Position, StatusEffect, StatusEffectType, Viewshed},
     map::Map,
     state::RunState,
 };
 
-pub struct MonsterAISystem {}
+pub struct EnemyAISystem {}
 
-impl<'a> System<'a> for MonsterAISystem {
+impl<'a> System<'a> for EnemyAISystem {
     type SystemData = (
         Entities<'a>,
         ReadExpect<'a, Point>,
         ReadExpect<'a, Entity>,
         ReadExpect<'a, RunState>,
-        ReadStorage<'a, Monster>,
+        ReadStorage<'a, Enemy>,
         WriteExpect<'a, Map>,
         WriteStorage<'a, Viewshed>,
         WriteStorage<'a, Position>,
@@ -29,7 +29,7 @@ impl<'a> System<'a> for MonsterAISystem {
             player_pos,
             player,
             run_state,
-            monster,
+            enemy,
             mut map,
             mut viewsheds,
             mut positions,
@@ -37,12 +37,12 @@ impl<'a> System<'a> for MonsterAISystem {
             mut status_effects,
         ) = data;
 
-        if *run_state != RunState::MonsterTurn {
+        if *run_state != RunState::EnemyTurn {
             return;
         }
 
-        for (entity, viewshed, _monster, pos) in
-            (&entities, &mut viewsheds, &monster, &mut positions).join()
+        for (entity, viewshed, _enemy, pos) in
+            (&entities, &mut viewsheds, &enemy, &mut positions).join()
         {
             let mut can_act = true;
 
@@ -73,7 +73,7 @@ impl<'a> System<'a> for MonsterAISystem {
                         &mut *map,
                     );
 
-                    // Check for 2+ steps (where 0 is current location) and move monster to that location
+                    // Check for 2+ steps (where 0 is current location) and move enemy to that location
                     if path.success && path.steps.len() > 1 {
                         let mut idx = map.xy_idx(pos.x, pos.y);
 

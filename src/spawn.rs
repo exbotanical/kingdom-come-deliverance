@@ -6,7 +6,7 @@ use specs::{
 
 use crate::{
     components::{
-        AreaOfEffect, BlocksCell, CombatStats, Consumable, InflictsDamage, Item, Monster, Name,
+        AreaOfEffect, BlocksCell, CombatStats, Consumable, Enemy, InflictsDamage, Item, Name,
         Player, Position, ProvidesHealing, Ranged, Renderable, SerializeOnSave, StatusEffect,
         StatusEffectType, Viewshed,
     },
@@ -14,7 +14,7 @@ use crate::{
     map::MAP_WIDTH,
 };
 
-const MAX_MONSTERS: i32 = 4;
+const MAX_ENEMIES: i32 = 4;
 const MAX_ITEMS: i32 = 2;
 
 pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
@@ -46,21 +46,21 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
 }
 
 pub fn room(ecs: &mut World, room: &Rect) {
-    let monster_spawn_points: Vec<usize>;
+    let enemy_spawn_points: Vec<usize>;
     let item_spawn_points: Vec<usize>;
 
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
 
-        let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-        monster_spawn_points = generate_spawn_points(&mut rng, room, num_monsters);
+        let num_enemies = rng.roll_dice(1, MAX_ENEMIES + 2) - 3;
+        enemy_spawn_points = generate_spawn_points(&mut rng, room, num_enemies);
 
         let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
 
         item_spawn_points = generate_spawn_points(&mut rng, room, num_items);
     }
 
-    spawn_in_room(ecs, monster_spawn_points, spawn_random_monster);
+    spawn_in_room(ecs, enemy_spawn_points, spawn_random_enemy);
     spawn_in_room(ecs, item_spawn_points, spawn_random_item);
 }
 
@@ -95,7 +95,7 @@ where
     }
 }
 
-fn spawn_random_monster(ecs: &mut World, x: i32, y: i32) {
+fn spawn_random_enemy(ecs: &mut World, x: i32, y: i32) {
     let roll;
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
@@ -110,14 +110,14 @@ fn spawn_random_monster(ecs: &mut World, x: i32, y: i32) {
 }
 
 fn spawn_orc(ecs: &mut World, x: i32, y: i32) {
-    spawn_monster(ecs, x, y, rltk::to_cp437('o'), "Orc");
+    spawn_enemy(ecs, x, y, rltk::to_cp437('o'), "Orc");
 }
 
 fn spawn_goblin(ecs: &mut World, x: i32, y: i32) {
-    spawn_monster(ecs, x, y, rltk::to_cp437('g'), "Goblin");
+    spawn_enemy(ecs, x, y, rltk::to_cp437('g'), "Goblin");
 }
 
-fn spawn_monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: S) {
+fn spawn_enemy<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: S) {
     ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
@@ -131,7 +131,7 @@ fn spawn_monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::Font
             range: 8,
             dirty: true,
         })
-        .with(Monster {})
+        .with(Enemy {})
         .with(Name {
             name: name.to_string(),
         })
