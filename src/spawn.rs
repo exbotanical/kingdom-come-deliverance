@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rltk::RandomNumberGenerator;
 use specs::{
     prelude::*,
@@ -12,6 +14,7 @@ use crate::{
     },
     geometry::Rect,
     map::MAP_WIDTH,
+    random_table::RandomTable,
 };
 
 const MAX_ENEMIES: i32 = 4;
@@ -45,68 +48,48 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
         .build()
 }
 
-pub fn room(ecs: &mut World, room: &Rect) {
-    let enemy_spawn_points: Vec<usize>;
-    let item_spawn_points: Vec<usize>;
+pub fn room(ecs: &mut World, room: &Rect, map_depth: i32) {
+    let spawn_table = room_table(map_depth);
+    let mut spawn_points: HashMap<usize, String> = HashMap::new();
 
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+        let num_spawns = rng.roll_dice(1, MAX_ENEMIES + 3) + (map_depth - 1) - 3;
 
-        let num_enemies = rng.roll_dice(1, MAX_ENEMIES + 2) - 3;
-        enemy_spawn_points = generate_spawn_points(&mut rng, room, num_enemies);
+        for _i in 0..num_spawns {
+            let mut added = false;
+            let mut tries = 0;
 
-        let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
+            // Keep picking random cells until we find an empty one
+            while !added && tries < 20 {
+                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
+                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
+                let idx = (y * MAP_WIDTH as usize) + x;
 
-        item_spawn_points = generate_spawn_points(&mut rng, room, num_items);
-    }
-
-    spawn_in_room(ecs, enemy_spawn_points, spawn_random_enemy);
-    spawn_in_room(ecs, item_spawn_points, spawn_random_item);
-}
-
-fn generate_spawn_points(rng: &mut RandomNumberGenerator, room: &Rect, num: i32) -> Vec<usize> {
-    let mut spawn_points = Vec::new();
-
-    for _i in 0..num {
-        let mut added = false;
-        while !added {
-            let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
-            let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
-
-            let idx = (y * MAP_WIDTH as usize) + x;
-            if !spawn_points.contains(&idx) {
-                spawn_points.push(idx);
-                added = true;
+                if !spawn_points.contains_key(&idx) {
+                    spawn_points.insert(idx, spawn_table.roll(&mut rng));
+                    added = true;
+                } else {
+                    tries += 1;
+                }
             }
         }
     }
 
-    spawn_points
-}
+    for spawn in spawn_points.iter() {
+        let x = *spawn.0 as i32 % MAP_WIDTH;
+        let y = *spawn.0 as i32 / MAP_WIDTH;
 
-fn spawn_in_room<F>(ecs: &mut World, points: Vec<usize>, cb: F)
-where
-    F: Fn(&mut World, i32, i32),
-{
-    for idx in points.iter() {
-        let x = *idx as i32 % MAP_WIDTH;
-        let y = *idx as i32 / MAP_WIDTH;
-        cb(ecs, x, y);
+        match spawn.1.as_ref() {
+            "Goblin" => spawn_goblin(ecs, x, y),
+            "Orc" => spawn_orc(ecs, x, y),
+            "Health Potion" => spawn_health_potion(ecs, x, y),
+            "Fireball Scroll" => spawn_fireball_scroll(ecs, x, y),
+            "Confusion Scroll" => spawn_confusion_scroll(ecs, x, y),
+            "Magic Missile Scroll" => spawn_missile_scroll(ecs, x, y),
+            _ => {}
+        }
     }
-}
-
-fn spawn_random_enemy(ecs: &mut World, x: i32, y: i32) {
-    let roll;
-    {
-        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-
-        roll = rng.roll_dice(1, 2);
-    }
-
-    match roll {
-        1 => spawn_goblin(ecs, x, y),
-        _ => spawn_orc(ecs, x, y),
-    };
 }
 
 fn spawn_orc(ecs: &mut World, x: i32, y: i32) {
@@ -243,4 +226,14 @@ fn spawn_confusion_scroll(ecs: &mut World, x: i32, y: i32) {
         })
         .marked::<SimpleMarker<SerializeOnSave>>()
         .build();
+}
+
+fn room_table(map_depth: i32) -> RandomTable {
+    RandomTable::new()
+        .add("Goblin", 10)
+        .add("Org", 1 + map_depth)
+        .add("Health Potion", 7)
+        .add("Fireball scroll", 2 + map_depth)
+        .add("Confusion scroll", 2 + map_depth)
+        .add("Magic Missile Scroll", 4)
 }

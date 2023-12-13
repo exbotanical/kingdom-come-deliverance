@@ -60,7 +60,7 @@ fn main() -> rltk::BError {
 
     // Skip room player spawned in
     for room in map.rooms.iter().skip(1) {
-        spawn::room(&mut gs.ecs, room);
+        spawn::room(&mut gs.ecs, room, 1);
     }
 
     let player_entity = spawn::player(&mut gs.ecs, x, y);

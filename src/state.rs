@@ -132,9 +132,10 @@ impl State {
 
         // Build new map and place player
         let map;
+        let current_depth;
         {
             let mut existing_map = self.ecs.write_resource::<Map>();
-            let current_depth = existing_map.depth;
+            current_depth = existing_map.depth;
 
             *existing_map = Map::generate_map_rooms_and_tunnels(current_depth + 1);
             map = existing_map.clone();
@@ -142,7 +143,7 @@ impl State {
 
         // Spawn enemies
         for room in map.rooms.iter().skip(1) {
-            spawn::room(&mut self.ecs, room);
+            spawn::room(&mut self.ecs, room, current_depth + 1);
         }
 
         let (player_x, player_y) = map.rooms[0].center();

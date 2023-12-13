@@ -3,7 +3,9 @@ use specs::prelude::*;
 use std::cmp::{max, min};
 
 use crate::{
-    components::{CombatStats, DesiresAcquireItem, DesiresMelee, Item, Player, Position, Viewshed},
+    components::{
+        CombatStats, DesiresAcquireItem, DesiresMelee, Enemy, Item, Player, Position, Viewshed,
+    },
     log::GameLog,
     map::{CellType, Map, MAP_HEIGHT, MAP_WIDTH},
     state::{RunState, State},
@@ -105,6 +107,11 @@ pub fn player_input(gs: &mut State, ctx: &mut rltk::Rltk) -> RunState {
                 }
             }
 
+            // Skip turn
+            rltk::VirtualKeyCode::Numpad5 | rltk::VirtualKeyCode::Space => {
+                return skip_turn(&mut gs.ecs)
+            }
+
             _ => return RunState::AwaitingInput,
         },
     }
@@ -161,4 +168,33 @@ fn try_next_level(ecs: &mut World) -> bool {
             .push("There is no way down from here.".to_string());
         false
     }
+}
+
+fn skip_turn(ecs: &mut World) -> RunState {
+    let player = ecs.fetch::<Entity>();
+    let viewsheds = ecs.read_storage::<Viewshed>();
+    let enemies = ecs.read_storage::<Enemy>();
+
+    let map = ecs.fetch::<Map>();
+
+    let mut can_heal = true;
+    let viewshed = viewsheds.get(*player).unwrap();
+
+    for cell in viewshed.visible_cells.iter() {
+        let idx = map.xy_idx(cell.x, cell.y);
+
+        for entity in map.cell_content[idx].iter() {
+            let enemy = enemies.get(*entity);
+            match enemy {
+                None => {}
+                Some(_) => can_heal = false,
+            }
+        }
+    }
+
+    if can_heal {
+        // TODO: heal
+    }
+
+    RunState::PlayerTurn
 }
